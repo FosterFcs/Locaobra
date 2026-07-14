@@ -924,6 +924,8 @@ function tableLocacoesCompleta(list){
         <td class="actions-cell">
           <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Contrato</button>
           <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Recibo</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'retirada')">Termo Retirada</button>
+          ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'devolucao')">Termo Devolução</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
         </td>
@@ -1074,6 +1076,7 @@ function gerarContratoPDF(loc){
    ====================================================== */
 function gerarReciboPDF(loc){
   const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
+  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   let y = 25;
@@ -1086,16 +1089,106 @@ function gerarReciboPDF(loc){
   doc.setFontSize(11);
   doc.text(`Recebemos de: ${cliente.nome || '-'}`, 15, y); y+=7;
   doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=7;
-  doc.text(`A quantia de: ${fmtMoney(loc.valor_total)}`, 15, y); y+=7;
-  doc.text(`Referente a: Locação de ferramentas — ${fmtDate(loc.data_retirada)} a ${fmtDate(loc.data_devolucao_prevista)}`, 15, y); y+=7;
-  doc.text(`Caução recebida: ${fmtMoney(loc.valor_caucao)}`, 15, y); y+=20;
+  doc.text(`A quantia de: ${fmtMoney(loc.valor_total)}`, 15, y); y+=10;
+
+  doc.setFont('helvetica','bold'); doc.text('Itens locados:', 15, y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  itens.forEach(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    doc.text(`• ${f?f.nome:'?'} (${f?f.codigo:''}) — Qtd: ${i.quantidade} — ${fmtMoney(i.subtotal)}`, 18, y);
+    y+=5.5;
+  });
+  y+=6;
+
+  doc.setFontSize(11);
+  doc.text(`Período: ${fmtDate(loc.data_retirada)} a ${fmtDate(loc.data_devolucao_prevista)} (cobrança ${loc.tipo_cobranca})`, 15, y); y+=7;
+  doc.text(`Caução recebida: ${fmtMoney(loc.valor_caucao)}`, 15, y);
+  if(loc.valor_multa > 0){ y+=7; doc.text(`Multa por atraso: ${fmtMoney(loc.valor_multa)}`, 15, y); }
+  y+=20;
 
   doc.text(`Santana de Parnaíba, ${new Date().toLocaleDateString('pt-BR')}`, 15, y); y+=20;
-  doc.text('_______________________________', 15, y); y+=5;
+  doc.text('_______________________________', 15, y);
+  doc.text('_______________________________', 115, y); y+=5;
+  doc.setFontSize(9);
   doc.text(EMPRESA.nome, 15, y);
+  doc.text(cliente.nome || 'Cliente', 115, y);
 
   doc.save(`recibo-${loc.numero || 'novo'}.pdf`);
   toast('Recibo PDF gerado');
+}
+
+/* ======================================================
+   TERMO DE RETIRADA / DEVOLUÇÃO (impressão para assinatura)
+   ====================================================== */
+function gerarTermoPDF(loc, tipo){
+  // tipo: 'retirada' ou 'devolucao'
+  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
+  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+
+  const titulo = tipo === 'retirada' ? 'TERMO DE RETIRADA DE FERRAMENTAS' : 'TERMO DE DEVOLUÇÃO DE FERRAMENTAS';
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text(titulo, 105, y, {align:'center'}); y+=7;
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Locação Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=14;
+
+  doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=5.5;
+  doc.setFont('helvetica','normal');
+  doc.text(`${EMPRESA.nome} — ${EMPRESA.telefone}`, 15, y); y+=9;
+
+  doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=5.5;
+  doc.setFont('helvetica','normal');
+  doc.text(`${cliente.nome || '-'}  |  Doc: ${cliente.documento || '-'}  |  Tel: ${cliente.telefone || '-'}`, 15, y); y+=11;
+
+  doc.setFont('helvetica','bold');
+  doc.text(tipo === 'retirada' ? `Data da retirada: ${fmtDate(loc.data_retirada)}` : `Data da devolução: ${fmtDate(loc.data_devolucao_real || todayISO())}`, 15, y);
+  y+=9;
+
+  doc.text('ITENS E ESTADO DE CONSERVAÇÃO', 15, y); y+=3;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+
+  // cabeçalho da tabela
+  doc.setFillColor(230,230,230);
+  doc.rect(15, y, 180, 7, 'F');
+  doc.setFont('helvetica','bold');
+  doc.text('Ferramenta', 17, y+5);
+  doc.text('Qtd', 110, y+5);
+  doc.text('Estado (Bom / Regular / Danificado)', 130, y+5);
+  y+=7;
+  doc.setFont('helvetica','normal');
+
+  itens.forEach(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    doc.rect(15, y, 180, 9);
+    doc.text(`${f?f.nome:'?'} (${f?f.codigo:''})`, 17, y+6);
+    doc.text(String(i.quantidade), 110, y+6);
+    doc.text('_______________________', 130, y+6);
+    y+=9;
+  });
+  y+=8;
+
+  doc.setFontSize(10);
+  doc.text('Observações:', 15, y); y+=5;
+  doc.rect(15, y, 180, 18);
+  y+=25;
+
+  doc.setFontSize(9);
+  const declaracao = tipo === 'retirada'
+    ? 'Declaro ter recebido o(s) equipamento(s) acima em bom estado de funcionamento e me responsabilizo pela guarda, conservação e devolução dentro do prazo acordado, conforme contrato de locação.'
+    : 'Declaro ter devolvido o(s) equipamento(s) acima, e ambas as partes conferem o estado de conservação descrito nesta tabela como correto e de comum acordo.';
+  const linhas = doc.splitTextToSize(declaracao, 180);
+  doc.text(linhas, 15, y); y += linhas.length*4.5 + 15;
+
+  doc.setFontSize(10);
+  doc.text('_______________________________', 15, y);
+  doc.text('_______________________________', 115, y); y+=5;
+  doc.text('Assinatura — Locadora', 15, y);
+  doc.text('Assinatura — Locatário', 115, y);
+
+  doc.save(`termo-${tipo}-${loc.numero || 'novo'}.pdf`);
+  toast(`Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} gerado`);
 }
 
 /* ======================================================
