@@ -1,16 +1,1159 @@
-chpdgbbteqvtfmkhsnlt.supabaseclient.co/auth/v1/token?grant_type=password:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
-supabase-js@2:14 TypeError: Failed to fetch
-    at supabase-js@2:14:2872
-    at Lr (supabase-js@2:14:9390)
-    at Y (supabase-js@2:14:9132)
-    at Di.signInWithPassword (supabase-js@2:16:20200)
-    at HTMLFormElement.<anonymous> (Locaobra/:1134:53)
-Lr @ supabase-js@2:14
-chpdgbbteqvtfmkhsnlt.supabaseclient.co/auth/v1/token?grant_type=password:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
-supabase-js@2:14 TypeError: Failed to fetch
-    at supabase-js@2:14:2872
-    at Lr (supabase-js@2:14:9390)
-    at Y (supabase-js@2:14:9132)
-    at Di.signInWithPassword (supabase-js@2:16:20200)
-    at HTMLFormElement.<anonymous> (Locaobra/:1134:53)
-Lr @ supabase-js@2:14
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocaObra — Gestão de Locação de Ferramentas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --charcoal:#1E2023;
+  --charcoal-2:#2A2D31;
+  --steel:#4A4E57;
+  --amber:#E00000;
+  --amber-dark:#B80000;
+  --concrete:#EDEAE3;
+  --concrete-2:#F7F5F0;
+  --ink:#24262A;
+  --ink-soft:#5B5F66;
+  --green:#2F9E6E;
+  --red:#D64545;
+  --line:#DDD8CE;
+  --radius:6px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--concrete);
+  color:var(--ink);
+  min-height:100vh;
+}
+h1,h2,h3,.display{
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+
+/* ---- hazard stripe signature ---- */
+.hazard{
+  height:6px;
+  background:repeating-linear-gradient(135deg,var(--charcoal) 0 14px, var(--amber) 14px 28px);
+}
+
+/* ---- layout ---- */
+.app{display:flex; min-height:100vh;}
+.sidebar{
+  width:220px; background:var(--charcoal); color:var(--concrete-2);
+  flex-shrink:0; display:flex; flex-direction:column;
+}
+.brand{
+  padding:22px 20px 16px; border-bottom:1px solid #34373B;
+}
+.brand .display{font-size:26px; color:var(--amber); line-height:1;}
+.brand .sub{font-size:11px; color:#9CA0A8; letter-spacing:0.08em; margin-top:2px;}
+nav{padding:14px 10px; flex:1;}
+nav button{
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:none; border:none; color:#C9CCD1; text-align:left;
+  padding:11px 12px; border-radius:var(--radius); font-size:14px; font-weight:500;
+  cursor:pointer; margin-bottom:2px; transition:background .15s;
+}
+nav button:hover{background:#2C2F34;}
+nav button.active{background:var(--amber); color:var(--charcoal); font-weight:700;}
+nav .icon{width:18px; text-align:center; font-size:15px;}
+
+.main{flex:1; display:flex; flex-direction:column; min-width:0;}
+.topbar{
+  background:var(--concrete-2); border-bottom:1px solid var(--line);
+  padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+}
+.topbar h1{font-size:24px; color:var(--ink);}
+.content{padding:26px 28px 60px; overflow-y:auto;}
+
+/* ---- cards / stats ---- */
+.grid{display:grid; gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-2{grid-template-columns:1fr 1fr;}
+@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-2{grid-template-columns:1fr;} .sidebar{width:70px;} .brand .display{display:none;} nav button span.label{display:none;}}
+
+.stat{
+  background:var(--concrete-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px 18px; position:relative; overflow:hidden;
+}
+.stat::before{content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--amber);}
+.stat .num{font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:600; color:var(--ink);}
+.stat .lbl{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;}
+.stat.warn::before{background:var(--red);}
+.stat.ok::before{background:var(--green);}
+
+.panel{
+  background:var(--concrete-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; margin-bottom:18px;
+}
+.panel h2{font-size:19px; margin-bottom:14px; color:var(--ink); display:flex; align-items:center; gap:8px;}
+.panel h2 .tag{
+  font-family:'JetBrains Mono',monospace; font-size:10px; background:var(--amber); color:var(--charcoal);
+  padding:2px 6px; border-radius:3px; text-transform:none; letter-spacing:0;
+}
+
+/* ---- forms ---- */
+label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;}
+input,select,textarea{
+  width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
+  font-family:'Inter',sans-serif; font-size:14px; background:#fff; color:var(--ink);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
+.field{margin-bottom:13px;}
+.row{display:flex; gap:12px;}
+.row > *{flex:1;}
+
+button.btn{
+  font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer;
+  border:none; border-radius:var(--radius); padding:10px 18px; transition:transform .1s, opacity .15s;
+}
+button.btn:active{transform:scale(0.98);}
+.btn-primary{background:var(--amber); color:var(--charcoal);}
+.btn-primary:hover{background:var(--amber-dark);}
+.btn-dark{background:var(--charcoal); color:#fff;}
+.btn-dark:hover{opacity:0.85;}
+.btn-outline{background:none; border:1.5px solid var(--charcoal); color:var(--charcoal);}
+.btn-outline:hover{background:var(--charcoal); color:#fff;}
+.btn-sm{padding:6px 12px; font-size:12.5px;}
+.btn-danger{background:none; color:var(--red); border:1.5px solid var(--red);}
+
+/* ---- table ---- */
+table{width:100%; border-collapse:collapse; font-size:13.5px;}
+th{
+  text-align:left; padding:9px 10px; background:var(--charcoal); color:var(--concrete-2);
+  font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase; font-size:12px; letter-spacing:0.04em;
+}
+th:first-child{border-radius:5px 0 0 0;} th:last-child{border-radius:0 5px 0 0;}
+td{padding:9px 10px; border-bottom:1px solid var(--line);}
+tr:hover td{background:#F2EFE8;}
+
+.badge{
+  display:inline-block; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.03em;
+}
+.badge-ok{background:#E1F3EA; color:var(--green);}
+.badge-warn{background:#FDEBD3; color:var(--amber-dark);}
+.badge-bad{background:#FBE4E4; color:var(--red);}
+.badge-neutral{background:#E8E6E0; color:var(--ink-soft);}
+
+.item-row{display:flex; gap:10px; align-items:end; margin-bottom:10px; padding:10px; background:#F7F5F0; border-radius:var(--radius); border:1px dashed var(--line);}
+.item-row select, .item-row input{flex:1;}
+.item-row .qty{max-width:70px;}
+.item-row button{flex-shrink:0;}
+
+.summary-box{
+  background:var(--charcoal); color:#fff; border-radius:var(--radius); padding:16px 18px; margin-top:14px;
+}
+.summary-box .row{justify-content:space-between; margin-bottom:6px; font-size:14px;}
+.summary-box .total{font-family:'JetBrains Mono',monospace; font-size:22px; color:var(--amber); font-weight:700;}
+
+.empty{text-align:center; padding:40px 20px; color:var(--ink-soft);}
+.empty .display{font-size:20px; color:var(--steel); margin-bottom:6px;}
+
+.toast{
+  position:fixed; bottom:20px; right:20px; background:var(--charcoal); color:#fff;
+  padding:12px 18px; border-radius:var(--radius); font-size:14px; z-index:999;
+  border-left:4px solid var(--amber); box-shadow:0 6px 18px rgba(0,0,0,0.25);
+  display:none;
+}
+.hidden{display:none !important;}
+.actions-cell{display:flex; gap:6px;}
+.config-note{font-size:12.5px; color:var(--ink-soft); background:#FDEBD3; border:1px solid #F0D19A; padding:10px 12px; border-radius:var(--radius); margin-bottom:16px;}
+
+/* ---- login screen ---- */
+.login-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:var(--charcoal);
+}
+.login-card{
+  width:100%; max-width:360px; background:var(--concrete-2); border-radius:var(--radius);
+  padding:32px 30px; box-shadow:0 20px 50px rgba(0,0,0,0.35); position:relative; overflow:hidden;
+}
+.login-card::before{content:''; position:absolute; left:0; top:0; right:0; height:5px; background:var(--amber);}
+.login-card .display{font-size:30px; color:var(--amber); text-align:center; margin-bottom:2px;}
+.login-card .sub{font-size:12px; color:var(--ink-soft); text-align:center; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:24px;}
+.login-card .field{margin-bottom:14px;}
+.login-card button{width:100%; margin-top:6px;}
+.login-error{color:var(--red); font-size:13px; margin-top:10px; display:none;}
+.logout-btn{
+  margin:10px; padding:9px 12px; border-radius:var(--radius); background:none; border:1px solid #3A3D42;
+  color:#9CA0A8; font-size:12.5px; cursor:pointer; text-align:left;
+}
+.logout-btn:hover{background:#2C2F34; color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="login-wrap hidden" id="login-screen">
+  <div class="login-card">
+    <div class="display">LocaObra</div>
+    <div class="sub">Locação de Ferramentas</div>
+    <form id="form-login">
+      <div class="field"><label>E-mail</label><input id="login-email" type="email" required autocomplete="username"></div>
+      <div class="field"><label>Senha</label><input id="login-senha" type="password" required autocomplete="current-password"></div>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+      <div class="login-error" id="login-error">E-mail ou senha inválidos.</div>
+    </form>
+  </div>
+</div>
+
+<div class="app hidden" id="app-shell">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="display">LocaObra</div>
+      <div class="sub">Locação de Ferramentas</div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="dashboard"><span class="icon">▦</span><span class="label">Dashboard</span></button>
+      <button class="nav-btn" data-view="clientes"><span class="icon">◆</span><span class="label">Clientes</span></button>
+      <button class="nav-btn" data-view="ferramentas"><span class="icon">▣</span><span class="label">Ferramentas</span></button>
+      <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
+      <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
+    </nav>
+    <button class="logout-btn" id="logout-btn">↩ Sair</button>
+  </div>
+
+  <div class="main">
+    <div class="hazard"></div>
+    <div class="topbar">
+      <h1 id="page-title">Dashboard</h1>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======================================================
+   CONFIGURAÇÃO SUPABASE — troque pelos dados do seu projeto
+   ====================================================== */
+/* ======================================================
+   PROTEÇÃO CONTRA TELA EM BRANCO
+   ====================================================== */
+window.addEventListener('error', function(e){
+  console.error('Erro capturado:', e.error || e.message);
+  const shell = document.getElementById('app-shell');
+  const login = document.getElementById('login-screen');
+  if(shell && shell.classList.contains('hidden') && login && login.classList.contains('hidden')){
+    login.classList.remove('hidden');
+    const errBox = document.getElementById('login-error');
+    if(errBox){
+      errBox.textContent = 'Ocorreu um erro ao carregar o app: ' + (e.message || 'erro desconhecido') + '. Veja o console (F12) para detalhes.';
+      errBox.style.display = 'block';
+    }
+  }
+});
+
+const SUPABASE_URL = 'https://chpdgbbteqvtfmkhsnlt.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_20ISJkbvcQWeoYxBXXsCqg_EhHwHBEs';
+let supabaseClient = null;
+let supaOk = false;
+try{
+  if(!SUPABASE_URL.includes('SEU-PROJETO')){
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supaOk = true;
+  }
+}catch(e){ console.error(e); }
+
+/* ---- estado local (fallback demo se Supabase não configurado) ---- */
+let DB = {
+  clientes: [],
+  ferramentas: [],
+  locacoes: [],
+  itens_locacao: [],
+  pagamentos: []
+};
+
+const EMPRESA = {
+  nome: 'Foster Engenharia & Construção',
+  cnpj: '',
+  telefone: '(11) 93959-1627',
+  email: 'comercial@fosterconstrucoes.com.br',
+  endereco: 'Santana de Parnaíba, SP'
+};
+
+function toast(msg, ok=true){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderLeftColor = ok ? 'var(--amber)' : 'var(--red)';
+  t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=> t.style.display='none', 2600);
+}
+
+function fmtMoney(v){ return 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtDate(d){ if(!d) return '-'; const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('pt-BR'); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return 'id-'+Math.random().toString(36).slice(2,10); }
+
+/* ======================================================
+   CARREGAMENTO DE DADOS
+   ====================================================== */
+async function loadAll(){
+  if(supaOk){
+    try{
+      const [c,f,l,i,p] = await Promise.all([
+        supabaseClient.from('clientes').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('ferramentas').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('locacoes').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('itens_locacao').select('*'),
+        supabaseClient.from('pagamentos').select('*')
+      ]);
+      DB.clientes = c.data || [];
+      DB.ferramentas = f.data || [];
+      DB.locacoes = l.data || [];
+      DB.itens_locacao = i.data || [];
+      DB.pagamentos = p.data || [];
+    }catch(e){ console.error(e); toast('Erro ao carregar do Supabase — usando modo local', false); }
+  }
+}
+
+/* ======================================================
+   NAVEGAÇÃO
+   ====================================================== */
+const titles = {
+  dashboard:'Dashboard', clientes:'Clientes', ferramentas:'Ferramentas',
+  'nova-locacao':'Nova Locação', locacoes:'Locações'
+};
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('page-title').textContent = titles[view];
+    render(view);
+  });
+});
+
+async function render(view){
+  const el = document.getElementById('content');
+  el.innerHTML = '<div class="empty">Carregando…</div>';
+  await loadAll();
+  if(view === 'dashboard') renderDashboard(el);
+  else if(view === 'clientes') renderClientes(el);
+  else if(view === 'ferramentas') renderFerramentas(el);
+  else if(view === 'nova-locacao') renderNovaLocacao(el);
+  else if(view === 'locacoes') renderLocacoes(el);
+}
+
+/* ======================================================
+   CONFIG NOTE (se supabase não estiver configurado)
+   ====================================================== */
+function configNote(){
+  if(supaOk) return '';
+  return `<div class="config-note">⚠ Supabase ainda não configurado — edite <span class="mono">SUPABASE_URL</span> e <span class="mono">SUPABASE_ANON_KEY</span> no topo do arquivo. Rodando em modo demonstração (dados não são salvos).</div>`;
+}
+
+/* ======================================================
+   DASHBOARD
+   ====================================================== */
+function renderDashboard(el){
+  const ativas = DB.locacoes.filter(l=>l.status==='ativa');
+  const atrasadas = DB.locacoes.filter(l=> l.status==='ativa' && l.data_devolucao_prevista < todayISO());
+  const disponiveis = DB.ferramentas.reduce((s,f)=>s+(f.quantidade_disponivel||0),0);
+  const mesAtual = new Date().toISOString().slice(0,7);
+  const faturamentoMes = DB.pagamentos.filter(p=> (p.data_pagamento||'').slice(0,7)===mesAtual && p.tipo==='pagamento')
+    .reduce((s,p)=>s+Number(p.valor||0),0);
+
+  el.innerHTML = `
+    ${configNote()}
+    <div class="grid grid-4" style="margin-bottom:20px;">
+      <div class="stat"><div class="num mono">${ativas.length}</div><div class="lbl">Locações ativas</div></div>
+      <div class="stat warn"><div class="num mono">${atrasadas.length}</div><div class="lbl">Devoluções atrasadas</div></div>
+      <div class="stat ok"><div class="num mono">${disponiveis}</div><div class="lbl">Itens disponíveis</div></div>
+      <div class="stat"><div class="num mono">${fmtMoney(faturamentoMes)}</div><div class="lbl">Faturamento do mês</div></div>
+    </div>
+    <div class="panel">
+      <h2>Locações em andamento</h2>
+      ${ativas.length ? tableLocacoes(ativas) : `<div class="empty"><div class="display">Nenhuma locação ativa</div>Comece criando uma nova locação.</div>`}
+    </div>
+  `;
+}
+
+function tableLocacoes(list){
+  return `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Retirada</th><th>Devolução prevista</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody>
+    ${list.map(l=>{
+      const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
+      const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
+      const badge = atrasada ? '<span class="badge badge-bad">Atrasada</span>' :
+        l.status==='devolvida' ? '<span class="badge badge-neutral">Devolvida</span>' :
+        l.status==='cancelada' ? '<span class="badge badge-neutral">Cancelada</span>' :
+        '<span class="badge badge-ok">Ativa</span>';
+      return `<tr>
+        <td class="mono">#${l.numero||'-'}</td>
+        <td>${cliente ? cliente.nome : '—'}</td>
+        <td>${fmtDate(l.data_retirada)}</td>
+        <td>${fmtDate(l.data_devolucao_prevista)}</td>
+        <td class="mono">${fmtMoney(l.valor_total)}</td>
+        <td>${badge}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="verLocacao('${l.id}')">Ver</button></td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+/* ======================================================
+   CLIENTES
+   ====================================================== */
+function renderClientes(el){
+  el.innerHTML = `
+    ${configNote()}
+    <div class="grid grid-2">
+      <div class="panel">
+        <h2 id="form-cliente-titulo">Novo cliente</h2>
+        <form id="form-cliente">
+          <input type="hidden" id="cli-id" value="">
+          <div class="field"><label>Tipo</label>
+            <select id="cli-tipo"><option value="fisica">Pessoa física</option><option value="juridica">Pessoa jurídica</option></select>
+          </div>
+          <div class="field"><label>Nome / Razão social</label><input id="cli-nome" required></div>
+          <div class="field"><label>CPF / CNPJ</label><input id="cli-doc" required></div>
+          <div class="row">
+            <div class="field"><label>Telefone</label><input id="cli-tel" placeholder="(11) 99999-9999"></div>
+            <div class="field"><label>E-mail</label><input id="cli-email" type="email"></div>
+          </div>
+          <div class="field"><label>Endereço</label><input id="cli-end"></div>
+          <div class="field"><label>Status</label>
+            <select id="cli-status"><option value="ativo">Ativo</option><option value="inadimplente">Inadimplente</option><option value="bloqueado">Bloqueado</option></select>
+          </div>
+          <div class="field"><label>Observações</label><textarea id="cli-obs" rows="2"></textarea></div>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" id="cli-submit-btn">Cadastrar cliente</button>
+            <button type="button" class="btn btn-outline hidden" id="cli-cancel-btn" onclick="cancelarEdicaoCliente()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Clientes cadastrados <span class="tag">${DB.clientes.length}</span></h2>
+        <div class="field"><input id="busca-cliente" placeholder="Buscar por nome ou documento..." oninput="filtrarClientes()"></div>
+        <div id="lista-clientes">${listaClientesHTML(DB.clientes)}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('cli-id').value;
+    const dados = {
+      tipo_pessoa: document.getElementById('cli-tipo').value,
+      nome: document.getElementById('cli-nome').value,
+      documento: document.getElementById('cli-doc').value,
+      telefone: document.getElementById('cli-tel').value,
+      email: document.getElementById('cli-email').value,
+      endereco: document.getElementById('cli-end').value,
+      observacoes: document.getElementById('cli-obs').value,
+      status: document.getElementById('cli-status').value
+    };
+    if(id){
+      if(supaOk){
+        const {error} = await supabaseClient.from('clientes').update(dados).eq('id', id);
+        if(error){ toast('Erro ao atualizar cliente', false); console.error(error); return; }
+      } else {
+        const c = DB.clientes.find(x=>x.id===id);
+        Object.assign(c, dados);
+      }
+      toast('Cliente atualizado');
+    } else {
+      if(supaOk){
+        const {error} = await supabaseClient.from('clientes').insert(dados);
+        if(error){ toast('Erro ao salvar cliente', false); console.error(error); return; }
+      } else {
+        dados.id = uid(); dados.criado_em = new Date().toISOString();
+        DB.clientes.unshift(dados);
+      }
+      toast('Cliente cadastrado com sucesso');
+    }
+    render('clientes');
+  });
+}
+
+function listaClientesHTML(list){
+  if(!list.length) return `<div class="empty"><div class="display">Nenhum cliente encontrado</div></div>`;
+  return `<table><thead><tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    ${list.map(c=>`<tr><td>${c.nome}</td><td class="mono">${c.documento}</td><td>${c.telefone||'-'}</td>
+    <td><span class="badge ${c.status==='ativo'?'badge-ok':'badge-bad'}">${c.status}</span></td>
+    <td class="actions-cell">
+      <button class="btn btn-outline btn-sm" onclick="editarCliente('${c.id}')">Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="excluirCliente('${c.id}')">Excluir</button>
+    </td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+function filtrarClientes(){
+  const termo = document.getElementById('busca-cliente').value.toLowerCase();
+  const filtrados = DB.clientes.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento||'').toLowerCase().includes(termo));
+  document.getElementById('lista-clientes').innerHTML = listaClientesHTML(filtrados);
+}
+
+function editarCliente(id){
+  const c = DB.clientes.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('cli-id').value = c.id;
+  document.getElementById('cli-tipo').value = c.tipo_pessoa || 'fisica';
+  document.getElementById('cli-nome').value = c.nome || '';
+  document.getElementById('cli-doc').value = c.documento || '';
+  document.getElementById('cli-tel').value = c.telefone || '';
+  document.getElementById('cli-email').value = c.email || '';
+  document.getElementById('cli-end').value = c.endereco || '';
+  document.getElementById('cli-status').value = c.status || 'ativo';
+  document.getElementById('cli-obs').value = c.observacoes || '';
+  document.getElementById('form-cliente-titulo').textContent = 'Editar cliente';
+  document.getElementById('cli-submit-btn').textContent = 'Salvar alterações';
+  document.getElementById('cli-cancel-btn').classList.remove('hidden');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelarEdicaoCliente(){ render('clientes'); }
+
+async function excluirCliente(id){
+  if(!confirm('Excluir este cliente? Essa ação não pode ser desfeita.')) return;
+  if(supaOk){
+    const {error} = await supabaseClient.from('clientes').delete().eq('id', id);
+    if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
+  } else {
+    DB.clientes = DB.clientes.filter(x=>x.id!==id);
+  }
+  toast('Cliente excluído');
+  render('clientes');
+}
+
+/* ======================================================
+   FERRAMENTAS
+   ====================================================== */
+function renderFerramentas(el){
+  el.innerHTML = `
+    ${configNote()}
+    <div class="grid grid-2">
+      <div class="panel">
+        <h2 id="form-ferramenta-titulo">Nova ferramenta / equipamento</h2>
+        <form id="form-ferramenta">
+          <input type="hidden" id="fer-id" value="">
+          <div class="row">
+            <div class="field"><label>Código</label><input id="fer-cod" placeholder="FER-001" required></div>
+            <div class="field"><label>Categoria</label><input id="fer-cat" placeholder="Elétrica, manual, andaime..."></div>
+          </div>
+          <div class="field"><label>Nome</label><input id="fer-nome" placeholder="Furadeira de impacto Bosch" required></div>
+          <div class="row">
+            <div class="field"><label>Valor diária (R$)</label><input id="fer-diaria" type="number" step="0.01" required></div>
+            <div class="field"><label>Valor semanal (R$) — opcional</label><input id="fer-semanal" type="number" step="0.01"></div>
+            <div class="field"><label>Valor mensal (R$) — opcional</label><input id="fer-mensal" type="number" step="0.01"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Valor de reposição (R$)</label><input id="fer-reposicao" type="number" step="0.01"></div>
+            <div class="field"><label>Quantidade em estoque</label><input id="fer-qtd" type="number" value="1" min="1" required></div>
+          </div>
+          <div class="field"><label>Status</label>
+            <select id="fer-status"><option value="disponivel">Disponível</option><option value="manutencao">Em manutenção</option><option value="inativo">Inativo</option></select>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" id="fer-submit-btn">Cadastrar ferramenta</button>
+            <button type="button" class="btn btn-outline hidden" id="fer-cancel-btn" onclick="cancelarEdicaoFerramenta()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Estoque <span class="tag">${DB.ferramentas.length}</span></h2>
+        <div class="field"><input id="busca-ferramenta" placeholder="Buscar por nome ou código..." oninput="filtrarFerramentas()"></div>
+        <div id="lista-ferramentas">${listaFerramentasHTML(DB.ferramentas)}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('form-ferramenta').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('fer-id').value;
+    const qtd = Number(document.getElementById('fer-qtd').value);
+    const dados = {
+      codigo: document.getElementById('fer-cod').value,
+      categoria: document.getElementById('fer-cat').value,
+      nome: document.getElementById('fer-nome').value,
+      valor_diaria: Number(document.getElementById('fer-diaria').value),
+      valor_semanal: document.getElementById('fer-semanal').value ? Number(document.getElementById('fer-semanal').value) : null,
+      valor_mensal: document.getElementById('fer-mensal').value ? Number(document.getElementById('fer-mensal').value) : null,
+      valor_reposicao: document.getElementById('fer-reposicao').value ? Number(document.getElementById('fer-reposicao').value) : null,
+      status: document.getElementById('fer-status').value
+    };
+    if(id){
+      const atual = DB.ferramentas.find(x=>x.id===id);
+      const delta = qtd - atual.quantidade_total;
+      dados.quantidade_total = qtd;
+      dados.quantidade_disponivel = Math.max(0, atual.quantidade_disponivel + delta);
+      if(supaOk){
+        const {error} = await supabaseClient.from('ferramentas').update(dados).eq('id', id);
+        if(error){ toast('Erro ao atualizar ferramenta', false); console.error(error); return; }
+      } else {
+        Object.assign(atual, dados);
+      }
+      toast('Ferramenta atualizada');
+    } else {
+      dados.quantidade_total = qtd;
+      dados.quantidade_disponivel = qtd;
+      if(supaOk){
+        const {error} = await supabaseClient.from('ferramentas').insert(dados);
+        if(error){ toast('Erro ao salvar ferramenta', false); console.error(error); return; }
+      } else {
+        dados.id = uid(); dados.criado_em = new Date().toISOString();
+        DB.ferramentas.unshift(dados);
+      }
+      toast('Ferramenta cadastrada com sucesso');
+    }
+    render('ferramentas');
+  });
+}
+
+function listaFerramentasHTML(list){
+  if(!list.length) return `<div class="empty"><div class="display">Nenhuma ferramenta encontrada</div></div>`;
+  return `<table><thead><tr><th>Código</th><th>Nome</th><th>Diária</th><th>Disponível</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    ${list.map(f=>`<tr><td class="mono">${f.codigo}</td><td>${f.nome}</td><td class="mono">${fmtMoney(f.valor_diaria)}</td>
+    <td class="mono">${f.quantidade_disponivel}/${f.quantidade_total}</td>
+    <td><span class="badge ${f.status==='disponivel'?'badge-ok':f.status==='manutencao'?'badge-warn':'badge-neutral'}">${f.status}</span></td>
+    <td class="actions-cell">
+      <button class="btn btn-outline btn-sm" onclick="editarFerramenta('${f.id}')">Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="excluirFerramenta('${f.id}')">Excluir</button>
+    </td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+function filtrarFerramentas(){
+  const termo = document.getElementById('busca-ferramenta').value.toLowerCase();
+  const filtrados = DB.ferramentas.filter(f => f.nome.toLowerCase().includes(termo) || (f.codigo||'').toLowerCase().includes(termo));
+  document.getElementById('lista-ferramentas').innerHTML = listaFerramentasHTML(filtrados);
+}
+
+function editarFerramenta(id){
+  const f = DB.ferramentas.find(x=>x.id===id);
+  if(!f) return;
+  document.getElementById('fer-id').value = f.id;
+  document.getElementById('fer-cod').value = f.codigo || '';
+  document.getElementById('fer-cat').value = f.categoria || '';
+  document.getElementById('fer-nome').value = f.nome || '';
+  document.getElementById('fer-diaria').value = f.valor_diaria || '';
+  document.getElementById('fer-semanal').value = f.valor_semanal || '';
+  document.getElementById('fer-mensal').value = f.valor_mensal || '';
+  document.getElementById('fer-reposicao').value = f.valor_reposicao || '';
+  document.getElementById('fer-qtd').value = f.quantidade_total || 1;
+  document.getElementById('fer-status').value = f.status || 'disponivel';
+  document.getElementById('form-ferramenta-titulo').textContent = 'Editar ferramenta';
+  document.getElementById('fer-submit-btn').textContent = 'Salvar alterações';
+  document.getElementById('fer-cancel-btn').classList.remove('hidden');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelarEdicaoFerramenta(){ render('ferramentas'); }
+
+async function excluirFerramenta(id){
+  if(!confirm('Excluir esta ferramenta? Essa ação não pode ser desfeita.')) return;
+  if(supaOk){
+    const {error} = await supabaseClient.from('ferramentas').delete().eq('id', id);
+    if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
+  } else {
+    DB.ferramentas = DB.ferramentas.filter(x=>x.id!==id);
+  }
+  toast('Ferramenta excluída');
+  render('ferramentas');
+}
+
+/* ======================================================
+   NOVA LOCAÇÃO
+   ====================================================== */
+let carrinho = []; // {ferramenta_id, quantidade}
+
+function renderNovaLocacao(el){
+  carrinho = [];
+  const clientesOptions = DB.clientes.map(c=>`<option value="${c.id}">${c.nome} — ${c.documento}</option>`).join('');
+  const ferramentasOptions = DB.ferramentas.filter(f=>f.quantidade_disponivel>0).map(f=>`<option value="${f.id}">${f.nome} (${f.codigo}) — disp: ${f.quantidade_disponivel}</option>`).join('');
+
+  el.innerHTML = `
+    ${configNote()}
+    <div class="panel">
+      <h2>1. Cliente e período</h2>
+      <div class="row">
+        <div class="field"><label>Cliente</label><select id="loc-cliente">${clientesOptions || '<option value="">Cadastre um cliente primeiro</option>'}</select></div>
+        <div class="field"><label>Tipo de cobrança</label>
+          <select id="loc-tipo">
+            <option value="diaria">Diária</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensal">Mensal</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Data de retirada</label><input id="loc-retirada" type="date" value="${todayISO()}"></div>
+        <div class="field"><label>Data de devolução prevista</label><input id="loc-devolucao" type="date"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>2. Ferramentas</h2>
+      <div class="item-row">
+        <select id="add-ferramenta">${ferramentasOptions || '<option value="">Nenhuma ferramenta disponível</option>'}</select>
+        <input id="add-qtd" type="number" class="qty" value="1" min="1">
+        <button class="btn btn-dark btn-sm" onclick="adicionarItem()">Adicionar</button>
+      </div>
+      <div id="carrinho-list"></div>
+    </div>
+
+    <div class="panel">
+      <h2>3. Caução (opcional)</h2>
+      <div class="field"><label>Valor de caução (R$)</label><input id="loc-caucao" type="number" step="0.01" value="0"></div>
+    </div>
+
+    <div id="resumo"></div>
+  `;
+
+  document.getElementById('loc-tipo').addEventListener('change', calcularResumo);
+  document.getElementById('loc-devolucao').addEventListener('change', calcularResumo);
+  document.getElementById('loc-retirada').addEventListener('change', calcularResumo);
+  document.getElementById('loc-caucao').addEventListener('input', calcularResumo);
+
+  // sugerir devolução +1 dia por padrão
+  const dev = document.getElementById('loc-devolucao');
+  const t = new Date(); t.setDate(t.getDate()+1);
+  dev.value = t.toISOString().slice(0,10);
+
+  calcularResumo();
+}
+
+function adicionarItem(){
+  const sel = document.getElementById('add-ferramenta');
+  const qtd = Number(document.getElementById('add-qtd').value);
+  if(!sel.value){ toast('Selecione uma ferramenta', false); return; }
+  const existente = carrinho.find(i=>i.ferramenta_id===sel.value);
+  if(existente){ existente.quantidade += qtd; }
+  else { carrinho.push({ferramenta_id: sel.value, quantidade: qtd}); }
+  renderCarrinho();
+  calcularResumo();
+}
+
+function removerItem(fid){
+  carrinho = carrinho.filter(i=>i.ferramenta_id!==fid);
+  renderCarrinho();
+  calcularResumo();
+}
+
+function renderCarrinho(){
+  const box = document.getElementById('carrinho-list');
+  if(!carrinho.length){ box.innerHTML = '<div class="empty" style="padding:16px;">Nenhuma ferramenta adicionada ainda</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>Ferramenta</th><th>Qtd</th><th></th></tr></thead><tbody>
+    ${carrinho.map(i=>{
+      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+      return `<tr><td>${f?f.nome:'?'}</td><td class="mono">${i.quantidade}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="removerItem('${i.ferramenta_id}')">Remover</button></td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+function calcularPeriodo(){
+  const r = document.getElementById('loc-retirada').value;
+  const d = document.getElementById('loc-devolucao').value;
+  if(!r || !d) return {dias:0};
+  const dias = Math.max(1, Math.round((new Date(d) - new Date(r)) / 86400000));
+  return {dias};
+}
+
+function calcularItemValor(f, tipo, dias){
+  if(!f) return 0;
+  if(tipo==='diaria') return f.valor_diaria * dias;
+  if(tipo==='semanal'){
+    const semanas = Math.ceil(dias/7);
+    const vSemana = f.valor_semanal || (f.valor_diaria*5);
+    return vSemana * semanas;
+  }
+  if(tipo==='mensal'){
+    const meses = Math.ceil(dias/30);
+    const vMes = f.valor_mensal || (f.valor_diaria*22);
+    return vMes * meses;
+  }
+  return 0;
+}
+
+function calcularResumo(){
+  const box = document.getElementById('resumo');
+  if(!box) return;
+  const tipo = document.getElementById('loc-tipo').value;
+  const {dias} = calcularPeriodo();
+  const caucao = Number(document.getElementById('loc-caucao').value || 0);
+
+  let total = 0;
+  const linhas = carrinho.map(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    const subtotal = calcularItemValor(f, tipo, dias) * i.quantidade;
+    total += subtotal;
+    return `<div class="row" style="font-size:13.5px; color:#C9CCD1;"><span>${f?f.nome:'?'} × ${i.quantidade}</span><span class="mono">${fmtMoney(subtotal)}</span></div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="summary-box">
+      <div style="font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:13px; color:#9CA0A8; margin-bottom:8px;">
+        Período: ${dias} dia(s) · Cobrança ${tipo}
+      </div>
+      ${linhas || '<div style="color:#9CA0A8; font-size:13.5px;">Adicione ferramentas acima</div>'}
+      <div class="row" style="margin-top:10px; border-top:1px solid #3A3D42; padding-top:10px;">
+        <span>Caução</span><span class="mono">${fmtMoney(caucao)}</span>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <span style="font-family:'Oswald',sans-serif; text-transform:uppercase;">Total da locação</span>
+        <span class="total">${fmtMoney(total)}</span>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button class="btn btn-primary" onclick="salvarLocacao()">Confirmar locação</button>
+    </div>
+  `;
+  window._locTotal = total;
+}
+
+async function salvarLocacao(){
+  const clienteId = document.getElementById('loc-cliente').value;
+  if(!clienteId){ toast('Selecione um cliente', false); return; }
+  if(!carrinho.length){ toast('Adicione ao menos uma ferramenta', false); return; }
+
+  const tipo = document.getElementById('loc-tipo').value;
+  const retirada = document.getElementById('loc-retirada').value;
+  const devolucao = document.getElementById('loc-devolucao').value;
+  const caucao = Number(document.getElementById('loc-caucao').value || 0);
+  const {dias} = calcularPeriodo();
+
+  const locacaoObj = {
+    cliente_id: clienteId,
+    data_retirada: retirada,
+    data_devolucao_prevista: devolucao,
+    tipo_cobranca: tipo,
+    valor_total: window._locTotal || 0,
+    valor_caucao: caucao,
+    status: 'ativa'
+  };
+
+  let locacaoId, numero;
+  if(supaOk){
+    const {data, error} = await supabaseClient.from('locacoes').insert(locacaoObj).select().single();
+    if(error){ toast('Erro ao salvar locação', false); console.error(error); return; }
+    locacaoId = data.id; numero = data.numero;
+    const itens = carrinho.map(i=>{
+      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+      const valorUnit = calcularItemValor(f, tipo, dias);
+      return {locacao_id: locacaoId, ferramenta_id: i.ferramenta_id, quantidade: i.quantidade, valor_unitario: valorUnit, subtotal: valorUnit*i.quantidade};
+    });
+    const {error:e2} = await supabaseClient.from('itens_locacao').insert(itens);
+    if(e2) console.error(e2);
+    if(caucao > 0){
+      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento:'a definir'});
+    }
+  } else {
+    locacaoId = uid(); numero = DB.locacoes.length + 1;
+    locacaoObj.id = locacaoId; locacaoObj.numero = numero; locacaoObj.criado_em = new Date().toISOString();
+    DB.locacoes.unshift(locacaoObj);
+    carrinho.forEach(i=>{
+      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+      const valorUnit = calcularItemValor(f, tipo, dias);
+      DB.itens_locacao.push({id:uid(), locacao_id: locacaoId, ferramenta_id:i.ferramenta_id, quantidade:i.quantidade, valor_unitario:valorUnit, subtotal:valorUnit*i.quantidade});
+      f.quantidade_disponivel -= i.quantidade;
+    });
+  }
+
+  toast('Locação registrada! Gerando contrato...');
+  await loadAll();
+  const locFinal = supaOk ? DB.locacoes.find(l=>l.id===locacaoId) : locacaoObj;
+  gerarContratoPDF(locFinal);
+  document.querySelector('[data-view="locacoes"]').click();
+}
+
+/* ======================================================
+   LOCAÇÕES (lista + ações)
+   ====================================================== */
+function renderLocacoes(el){
+  el.innerHTML = `
+    ${configNote()}
+    <div class="panel">
+      <h2>Todas as locações <span class="tag">${DB.locacoes.length}</span></h2>
+      <div class="row" style="margin-bottom:14px;">
+        <div class="field" style="margin-bottom:0;"><input id="busca-locacao" placeholder="Buscar por cliente ou número..." oninput="filtrarLocacoes()"></div>
+        <div class="field" style="margin-bottom:0; max-width:200px;">
+          <select id="filtro-status-locacao" onchange="filtrarLocacoes()">
+            <option value="">Todos os status</option>
+            <option value="ativa">Ativas</option>
+            <option value="atrasada">Atrasadas</option>
+            <option value="devolvida">Devolvidas</option>
+            <option value="cancelada">Canceladas</option>
+          </select>
+        </div>
+      </div>
+      <div id="lista-locacoes">${DB.locacoes.length ? tableLocacoesCompleta(DB.locacoes) : `<div class="empty"><div class="display">Nenhuma locação registrada</div></div>`}</div>
+    </div>
+  `;
+}
+
+function filtrarLocacoes(){
+  const termo = document.getElementById('busca-locacao').value.toLowerCase();
+  const statusFiltro = document.getElementById('filtro-status-locacao').value;
+  const filtrados = DB.locacoes.filter(l=>{
+    const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
+    const nomeMatch = (cliente?.nome||'').toLowerCase().includes(termo) || String(l.numero||'').includes(termo);
+    const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
+    const statusReal = atrasada ? 'atrasada' : l.status;
+    const statusMatch = !statusFiltro || statusReal === statusFiltro;
+    return nomeMatch && statusMatch;
+  });
+  document.getElementById('lista-locacoes').innerHTML = filtrados.length ? tableLocacoesCompleta(filtrados) : `<div class="empty"><div class="display">Nenhuma locação encontrada</div></div>`;
+}
+
+function tableLocacoesCompleta(list){
+  return `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Retirada</th><th>Devolução prev.</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    ${list.map(l=>{
+      const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
+      const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
+      const badge = l.status==='devolvida' ? '<span class="badge badge-neutral">Devolvida</span>' :
+        atrasada ? '<span class="badge badge-bad">Atrasada</span>' :
+        l.status==='cancelada' ? '<span class="badge badge-neutral">Cancelada</span>' :
+        '<span class="badge badge-ok">Ativa</span>';
+      return `<tr>
+        <td class="mono">#${l.numero||'-'}</td>
+        <td>${cliente?cliente.nome:'—'}</td>
+        <td>${fmtDate(l.data_retirada)}</td>
+        <td>${fmtDate(l.data_devolucao_prevista)}</td>
+        <td class="mono">${fmtMoney(l.valor_total)}</td>
+        <td>${badge}</td>
+        <td class="actions-cell">
+          <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Contrato</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Recibo</button>
+          ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
+          ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+function calcularMulta(locacaoId, diasAtraso){
+  if(diasAtraso <= 0) return 0;
+  const itens = DB.itens_locacao.filter(i=>i.locacao_id===locacaoId);
+  let multaDia = 0;
+  itens.forEach(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    if(f) multaDia += (f.valor_diaria || 0) * i.quantidade;
+  });
+  return multaDia * diasAtraso;
+}
+
+async function marcarDevolvida(id){
+  const hoje = todayISO();
+  const loc = DB.locacoes.find(x=>x.id===id);
+  const diasAtraso = loc ? Math.max(0, Math.round((new Date(hoje) - new Date(loc.data_devolucao_prevista)) / 86400000)) : 0;
+  const multa = calcularMulta(id, diasAtraso);
+
+  if(supaOk){
+    const {error} = await supabaseClient.from('locacoes').update({status:'devolvida', data_devolucao_real: hoje, valor_multa: multa}).eq('id', id);
+    if(error){ toast('Erro ao atualizar', false); return; }
+    // devolve estoque
+    const itens = DB.itens_locacao.filter(i=>i.locacao_id===id);
+    for(const i of itens){
+      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+      if(f) await supabaseClient.from('ferramentas').update({quantidade_disponivel: f.quantidade_disponivel + i.quantidade}).eq('id', f.id);
+    }
+    if(multa > 0){
+      await supabaseClient.from('pagamentos').insert({locacao_id: id, tipo:'multa', valor: multa, observacoes: `Multa por ${diasAtraso} dia(s) de atraso`});
+    }
+  } else {
+    loc.status='devolvida'; loc.data_devolucao_real=hoje; loc.valor_multa=multa;
+    DB.itens_locacao.filter(i=>i.locacao_id===id).forEach(i=>{
+      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+      if(f) f.quantidade_disponivel += i.quantidade;
+    });
+  }
+  toast(multa > 0 ? `Devolução registrada com multa de ${fmtMoney(multa)} (${diasAtraso} dia(s) de atraso)` : 'Devolução registrada, estoque atualizado');
+  render('locacoes');
+}
+
+function lembreteWhatsapp(id){
+  const loc = DB.locacoes.find(x=>x.id===id);
+  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id);
+  if(!cliente || !cliente.telefone){ toast('Cliente sem telefone cadastrado', false); return; }
+  const itens = DB.itens_locacao.filter(i=>i.locacao_id===id);
+  const nomesFerramentas = itens.map(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    return f ? f.nome : '';
+  }).filter(Boolean).join(', ');
+  const atrasada = loc.data_devolucao_prevista < todayISO();
+  const msg = atrasada
+    ? `Olá, ${cliente.nome}! A devolução de ${nomesFerramentas} estava prevista para ${fmtDate(loc.data_devolucao_prevista)} e consta em atraso. Poderia nos dar um retorno sobre a devolução? — ${EMPRESA.nome}`
+    : `Olá, ${cliente.nome}! Passando para lembrar que a devolução de ${nomesFerramentas} está prevista para ${fmtDate(loc.data_devolucao_prevista)}. Qualquer dúvida, estamos à disposição. — ${EMPRESA.nome}`;
+  const digitos = (cliente.telefone || '').replace(/\D/g, '');
+  const numeroCompleto = digitos.startsWith('55') ? digitos : `55${digitos}`;
+  window.open(`https://wa.me/${numeroCompleto}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function verLocacao(id){
+  document.querySelector('[data-view="locacoes"]').click();
+}
+
+/* ======================================================
+   GERAÇÃO DE PDF — CONTRATO
+   ====================================================== */
+function gerarContratoPDF(loc){
+  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
+  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('CONTRATO DE LOCAÇÃO DE FERRAMENTAS', 105, y, {align:'center'}); y+=8;
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Contrato Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=12;
+
+  doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=6;
+  doc.setFont('helvetica','normal');
+  doc.text(`${EMPRESA.nome}`, 15, y); y+=5;
+  doc.text(`Contato: ${EMPRESA.telefone} | ${EMPRESA.email}`, 15, y); y+=5;
+  doc.text(`${EMPRESA.endereco}`, 15, y); y+=10;
+
+  doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=6;
+  doc.setFont('helvetica','normal');
+  doc.text(`Nome: ${cliente.nome || '-'}`, 15, y); y+=5;
+  doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=5;
+  doc.text(`Telefone: ${cliente.telefone || '-'}`, 15, y); y+=5;
+  doc.text(`Endereço: ${cliente.endereco || '-'}`, 15, y); y+=10;
+
+  doc.setFont('helvetica','bold'); doc.text('OBJETO DA LOCAÇÃO', 15, y); y+=6;
+  doc.setFont('helvetica','normal');
+  itens.forEach(i=>{
+    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
+    doc.text(`• ${f?f.nome:'?'} (${f?f.codigo:''}) — Qtd: ${i.quantidade} — Subtotal: ${fmtMoney(i.subtotal)}`, 15, y);
+    y+=5;
+  });
+  y+=5;
+
+  doc.setFont('helvetica','bold'); doc.text('CONDIÇÕES', 15, y); y+=6;
+  doc.setFont('helvetica','normal');
+  const cond = [
+    `Data de retirada: ${fmtDate(loc.data_retirada)}`,
+    `Data prevista de devolução: ${fmtDate(loc.data_devolucao_prevista)}`,
+    `Tipo de cobrança: ${loc.tipo_cobranca}`,
+    `Valor total da locação: ${fmtMoney(loc.valor_total)}`,
+    `Valor de caução: ${fmtMoney(loc.valor_caucao)}`
+  ];
+  cond.forEach(c=>{ doc.text(c, 15, y); y+=5; });
+  y+=8;
+
+  doc.setFont('helvetica','bold'); doc.text('CLÁUSULAS GERAIS', 15, y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  const clausulas = [
+    '1. O LOCATÁRIO é responsável pela guarda, conservação e uso adequado do(s) equipamento(s) durante todo o período de locação.',
+    '2. Em caso de dano ou perda, o LOCATÁRIO se compromete a ressarcir a LOCADORA pelo valor de reposição do item.',
+    '3. A devolução fora do prazo previsto acarretará cobrança de diária adicional proporcional ao atraso, sem prejuízo de outras medidas cabíveis.',
+    '4. O(s) equipamento(s) deve(m) ser devolvido(s) em condições de uso, ressalvado o desgaste natural decorrente do uso regular.',
+    '5. O valor de caução, quando houver, será devolvido integralmente após a conferência do(s) equipamento(s) na devolução, descontadas eventuais multas ou danos.',
+    '6. Este contrato é regido pelas leis brasileiras, ficando eleito o foro da comarca da LOCADORA para dirimir eventuais controvérsias.'
+  ];
+  clausulas.forEach(c=>{
+    const lines = doc.splitTextToSize(c, 180);
+    doc.text(lines, 15, y); y += lines.length*4.5 + 2;
+  });
+
+  y+=15;
+  doc.setFontSize(10);
+  doc.text('_______________________________', 15, y);
+  doc.text('_______________________________', 115, y); y+=5;
+  doc.text('LOCADORA', 15, y);
+  doc.text('LOCATÁRIO', 115, y);
+
+  doc.save(`contrato-${loc.numero || 'novo'}.pdf`);
+  toast('Contrato PDF gerado');
+}
+
+/* ======================================================
+   GERAÇÃO DE PDF — RECIBO
+   ====================================================== */
+function gerarReciboPDF(loc){
+  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 25;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('RECIBO', 105, y, {align:'center'}); y+=6;
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Recibo referente à Locação Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=15;
+
+  doc.setFontSize(11);
+  doc.text(`Recebemos de: ${cliente.nome || '-'}`, 15, y); y+=7;
+  doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=7;
+  doc.text(`A quantia de: ${fmtMoney(loc.valor_total)}`, 15, y); y+=7;
+  doc.text(`Referente a: Locação de ferramentas — ${fmtDate(loc.data_retirada)} a ${fmtDate(loc.data_devolucao_prevista)}`, 15, y); y+=7;
+  doc.text(`Caução recebida: ${fmtMoney(loc.valor_caucao)}`, 15, y); y+=20;
+
+  doc.text(`Santana de Parnaíba, ${new Date().toLocaleDateString('pt-BR')}`, 15, y); y+=20;
+  doc.text('_______________________________', 15, y); y+=5;
+  doc.text(EMPRESA.nome, 15, y);
+
+  doc.save(`recibo-${loc.numero || 'novo'}.pdf`);
+  toast('Recibo PDF gerado');
+}
+
+/* ======================================================
+   AUTENTICAÇÃO
+   ====================================================== */
+async function initAuth(){
+  if(!supaOk){
+    // modo demo: sem login, entra direto
+    document.getElementById('app-shell').classList.remove('hidden');
+    render('dashboard');
+    return;
+  }
+  try{
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(session){
+      document.getElementById('app-shell').classList.remove('hidden');
+      render('dashboard');
+    } else {
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+  }catch(err){
+    console.error('Erro ao verificar sessão:', err);
+    document.getElementById('login-screen').classList.remove('hidden');
+    const errBox = document.getElementById('login-error');
+    errBox.textContent = 'Não foi possível conectar ao banco de dados. Verifique a conexão ou tente novamente.';
+    errBox.style.display = 'block';
+  }
+}
+
+document.getElementById('form-login').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const senha = document.getElementById('login-senha').value;
+  const errBox = document.getElementById('login-error');
+  errBox.style.display = 'none';
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+  if(error){
+    errBox.textContent = 'E-mail ou senha inválidos.';
+    errBox.style.display = 'block';
+    return;
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  render('dashboard');
+});
+
+document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  if(supaOk) await supabaseClient.auth.signOut();
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+});
+
+/* ======================================================
+   INIT
+   ====================================================== */
+initAuth();
+</script>
+</body>
+</html>
