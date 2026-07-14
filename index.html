@@ -185,16 +185,31 @@ tr:hover td{background:#F2EFE8;}
 .login-card button{width:100%; margin-top:6px;}
 .login-error{color:var(--red); font-size:13px; margin-top:10px; display:none;}
 .logout-btn{
-  margin:10px; padding:9px 12px; border-radius:var(--radius); background:none; border:1px solid #3A3D42;
+  width:100%; margin:0; padding:9px 12px; border-radius:var(--radius); background:none; border:1px solid #3A3D42;
   color:#9CA0A8; font-size:12.5px; cursor:pointer; text-align:left;
 }
 .logout-btn:hover{background:#2C2F34; color:#fff;}
+.logo-mark{width:64px; height:64px; display:block; margin:0 auto 10px;}
+.logo-mark-sm{width:38px; height:38px; margin:0 0 8px;}
+.dev-signature{
+  text-align:center; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.03em;
+  margin-top:20px; padding-top:14px; border-top:1px solid var(--line);
+}
+.sidebar-footer{padding:0 10px 14px;}
+.dev-signature-sidebar{
+  color:#6B6F76; font-size:9.5px; text-align:left; margin-top:8px; padding:0 2px;
+  border-top:none;
+}
 </style>
 </head>
 <body>
 
 <div class="login-wrap hidden" id="login-screen">
   <div class="login-card">
+    <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="var(--amber)" stroke-width="6"/>
+      <text x="50" y="67" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="46" fill="var(--amber)">L</text>
+    </svg>
     <div class="display">LocaObra</div>
     <div class="sub">Locação de Ferramentas</div>
     <form id="form-login">
@@ -203,12 +218,17 @@ tr:hover td{background:#F2EFE8;}
       <button type="submit" class="btn btn-primary">Entrar</button>
       <div class="login-error" id="login-error">E-mail ou senha inválidos.</div>
     </form>
+    <div class="dev-signature">Desenvolvido por Foster Engenharia &amp; Construção</div>
   </div>
 </div>
 
 <div class="app hidden" id="app-shell">
   <div class="sidebar">
     <div class="brand">
+      <svg class="logo-mark logo-mark-sm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="var(--amber)" stroke-width="7"/>
+        <text x="50" y="67" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="46" fill="var(--amber)">L</text>
+      </svg>
       <div class="display">LocaObra</div>
       <div class="sub">Locação de Ferramentas</div>
     </div>
@@ -219,7 +239,10 @@ tr:hover td{background:#F2EFE8;}
       <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
       <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
     </nav>
-    <button class="logout-btn" id="logout-btn">↩ Sair</button>
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logout-btn">↩ Sair</button>
+      <div class="dev-signature dev-signature-sidebar">Foster Engenharia &amp; Construção</div>
+    </div>
   </div>
 
   <div class="main">
@@ -529,9 +552,69 @@ async function excluirCliente(id){
 /* ======================================================
    FERRAMENTAS
    ====================================================== */
+/* ======================================================
+   FERRAMENTAS COMUNS — cadastro rápido
+   ====================================================== */
+const FERRAMENTAS_COMUNS = [
+  {nome:'Furadeira de impacto', categoria:'Elétrica', valor_diaria:25},
+  {nome:'Parafusadeira/Furadeira a bateria', categoria:'Elétrica', valor_diaria:30},
+  {nome:'Esmerilhadeira (lixadeira angular)', categoria:'Elétrica', valor_diaria:25},
+  {nome:'Serra circular', categoria:'Elétrica', valor_diaria:35},
+  {nome:'Serra mármore', categoria:'Elétrica', valor_diaria:35},
+  {nome:'Martelete rompedor', categoria:'Elétrica', valor_diaria:60},
+  {nome:'Betoneira 400L', categoria:'Concretagem', valor_diaria:80},
+  {nome:'Vibrador de concreto', categoria:'Concretagem', valor_diaria:50},
+  {nome:'Compactador de solo (soquete)', categoria:'Compactação', valor_diaria:90},
+  {nome:'Placa vibratória', categoria:'Compactação', valor_diaria:85},
+  {nome:'Andaime tubular (torre)', categoria:'Acesso', valor_diaria:40},
+  {nome:'Escora metálica', categoria:'Acesso', valor_diaria:8},
+  {nome:'Gerador de energia', categoria:'Energia', valor_diaria:100},
+  {nome:'Compressor de ar', categoria:'Energia', valor_diaria:70},
+  {nome:'Nível a laser', categoria:'Medição', valor_diaria:45},
+  {nome:'Roçadeira', categoria:'Jardinagem', valor_diaria:40},
+  {nome:'Carrinho de mão', categoria:'Manual', valor_diaria:10},
+  {nome:'Bomba submersa', categoria:'Hidráulica', valor_diaria:35}
+];
+
+async function cadastrarComuns(){
+  const marcados = Array.from(document.querySelectorAll('.chk-comum:checked')).map(el=>Number(el.dataset.idx));
+  if(!marcados.length){ toast('Selecione ao menos uma ferramenta', false); return; }
+  let proximoNumero = DB.ferramentas.length + 1;
+  const novos = marcados.map(idx=>{
+    const f = FERRAMENTAS_COMUNS[idx];
+    const codigo = `FER-${String(proximoNumero++).padStart(3,'0')}`;
+    return {
+      codigo, nome: f.nome, categoria: f.categoria,
+      valor_diaria: f.valor_diaria, valor_semanal: null, valor_mensal: null, valor_reposicao: null,
+      quantidade_total: 1, quantidade_disponivel: 1, status: 'disponivel'
+    };
+  });
+  if(supaOk){
+    const {error} = await supabaseClient.from('ferramentas').insert(novos);
+    if(error){ toast('Erro ao cadastrar em lote', false); console.error(error); return; }
+  } else {
+    novos.forEach(n=>{ n.id = uid(); n.criado_em = new Date().toISOString(); DB.ferramentas.unshift(n); });
+  }
+  toast(`${novos.length} ferramenta(s) cadastrada(s)`);
+  render('ferramentas');
+}
+
 function renderFerramentas(el){
   el.innerHTML = `
     ${configNote()}
+    <div class="panel">
+      <h2>Cadastro rápido <span class="tag">itens comuns</span></h2>
+      <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Marque as ferramentas que você já tem e cadastre todas de uma vez, com valores sugeridos (edite depois se quiser).</div>
+      <div id="lista-comuns" class="grid grid-4" style="gap:8px; margin-bottom:14px;">
+        ${FERRAMENTAS_COMUNS.map((f,idx)=>`
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; background:#F7F5F0; border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; cursor:pointer;">
+            <input type="checkbox" class="chk-comum" data-idx="${idx}" style="width:auto;">
+            ${f.nome}
+          </label>
+        `).join('')}
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="cadastrarComuns()">Cadastrar selecionadas</button>
+    </div>
     <div class="grid grid-2">
       <div class="panel">
         <h2 id="form-ferramenta-titulo">Nova ferramenta / equipamento</h2>
@@ -997,6 +1080,62 @@ function verLocacao(id){
 }
 
 /* ======================================================
+   PAPEL TIMBRADO — cabeçalho e rodapé padrão de todos os PDFs
+   ====================================================== */
+function desenharCabecalhoPDF(doc, titulo, subtitulo){
+  // faixa vermelha no topo
+  doc.setFillColor(224, 0, 0);
+  doc.rect(0, 0, 210, 16, 'F');
+
+  // marca hexagonal simplificada + wordmark
+  doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+  doc.setFillColor(224,0,0);
+  const cx=12, cy=8, r=5.2;
+  const pts=[];
+  for(let a=0;a<6;a++){ const ang=Math.PI/180*(60*a-90); pts.push([cx+r*Math.cos(ang), cy+r*Math.sin(ang)]); }
+  doc.setDrawColor(255,255,255);
+  for(let i=0;i<6;i++){ const [x1,y1]=pts[i]; const [x2,y2]=pts[(i+1)%6]; doc.line(x1,y1,x2,y2); }
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  doc.text('L', cx, cy+2, {align:'center'});
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('LOCAOBRA', 21, 7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text('Locação de Ferramentas', 21, 11.5);
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.text(EMPRESA.nome, 195, 6.5, {align:'right'});
+  doc.text(`${EMPRESA.telefone}  ·  ${EMPRESA.email}`, 195, 11, {align:'right'});
+
+  doc.setTextColor(0,0,0);
+  let y = 26;
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text(titulo, 105, y, {align:'center'}); y+=6;
+  if(subtitulo){
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text(subtitulo, 105, y, {align:'center'}); y+=8;
+  } else {
+    y+=4;
+  }
+  return y;
+}
+
+function desenharRodapePDF(doc){
+  const pageCount = doc.internal.getNumberOfPages();
+  for(let i=1; i<=pageCount; i++){
+    doc.setPage(i);
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.2);
+    doc.line(15, 282, 195, 282);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.setTextColor(140,140,140);
+    doc.text('Desenvolvido por Foster Engenharia & Construção', 15, 288);
+    doc.text(`Página ${i} de ${pageCount}`, 195, 288, {align:'right'});
+    doc.setTextColor(0,0,0);
+  }
+}
+
+/* ======================================================
    GERAÇÃO DE PDF — CONTRATO
    ====================================================== */
 function gerarContratoPDF(loc){
@@ -1004,12 +1143,7 @@ function gerarContratoPDF(loc){
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 20;
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(16);
-  doc.text('CONTRATO DE LOCAÇÃO DE FERRAMENTAS', 105, y, {align:'center'}); y+=8;
-  doc.setFontSize(10); doc.setFont('helvetica','normal');
-  doc.text(`Contrato Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=12;
+  let y = desenharCabecalhoPDF(doc, 'CONTRATO DE LOCAÇÃO DE FERRAMENTAS', `Contrato Nº ${loc.numero || '-'}`);
 
   doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=6;
   doc.setFont('helvetica','normal');
@@ -1067,6 +1201,7 @@ function gerarContratoPDF(loc){
   doc.text('LOCADORA', 15, y);
   doc.text('LOCATÁRIO', 115, y);
 
+  desenharRodapePDF(doc);
   doc.save(`contrato-${loc.numero || 'novo'}.pdf`);
   toast('Contrato PDF gerado');
 }
@@ -1079,12 +1214,7 @@ function gerarReciboPDF(loc){
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 25;
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(18);
-  doc.text('RECIBO', 105, y, {align:'center'}); y+=6;
-  doc.setFontSize(10); doc.setFont('helvetica','normal');
-  doc.text(`Recibo referente à Locação Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=15;
+  let y = desenharCabecalhoPDF(doc, 'RECIBO', `Referente à Locação Nº ${loc.numero || '-'}`);
 
   doc.setFontSize(11);
   doc.text(`Recebemos de: ${cliente.nome || '-'}`, 15, y); y+=7;
@@ -1113,6 +1243,7 @@ function gerarReciboPDF(loc){
   doc.text(EMPRESA.nome, 15, y);
   doc.text(cliente.nome || 'Cliente', 115, y);
 
+  desenharRodapePDF(doc);
   doc.save(`recibo-${loc.numero || 'novo'}.pdf`);
   toast('Recibo PDF gerado');
 }
@@ -1126,13 +1257,8 @@ function gerarTermoPDF(loc, tipo){
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 20;
-
   const titulo = tipo === 'retirada' ? 'TERMO DE RETIRADA DE FERRAMENTAS' : 'TERMO DE DEVOLUÇÃO DE FERRAMENTAS';
-  doc.setFont('helvetica','bold'); doc.setFontSize(15);
-  doc.text(titulo, 105, y, {align:'center'}); y+=7;
-  doc.setFontSize(10); doc.setFont('helvetica','normal');
-  doc.text(`Locação Nº ${loc.numero || '-'}`, 105, y, {align:'center'}); y+=14;
+  let y = desenharCabecalhoPDF(doc, titulo, `Locação Nº ${loc.numero || '-'}`);
 
   doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=5.5;
   doc.setFont('helvetica','normal');
@@ -1187,6 +1313,7 @@ function gerarTermoPDF(loc, tipo){
   doc.text('Assinatura — Locadora', 15, y);
   doc.text('Assinatura — Locatário', 115, y);
 
+  desenharRodapePDF(doc);
   doc.save(`termo-${tipo}-${loc.numero || 'novo'}.pdf`);
   toast(`Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} gerado`);
 }
