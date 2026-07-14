@@ -237,13 +237,30 @@ tr:hover td{background:#F2EFE8;}
 /* ======================================================
    CONFIGURAÇÃO SUPABASE — troque pelos dados do seu projeto
    ====================================================== */
-const SUPABASE_URL = 'https://chpdgbbteqvtfmkhsnlt.supabase.co';
+/* ======================================================
+   PROTEÇÃO CONTRA TELA EM BRANCO
+   ====================================================== */
+window.addEventListener('error', function(e){
+  console.error('Erro capturado:', e.error || e.message);
+  const shell = document.getElementById('app-shell');
+  const login = document.getElementById('login-screen');
+  if(shell && shell.classList.contains('hidden') && login && login.classList.contains('hidden')){
+    login.classList.remove('hidden');
+    const errBox = document.getElementById('login-error');
+    if(errBox){
+      errBox.textContent = 'Ocorreu um erro ao carregar o app: ' + (e.message || 'erro desconhecido') + '. Veja o console (F12) para detalhes.';
+      errBox.style.display = 'block';
+    }
+  }
+});
+
+const SUPABASE_URL = 'https://chpdgbbteqvtfmkhsnlt.supabaseClient.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_20ISJkbvcQWeoYxBXXsCqg_EhHwHBEs';
-let supabase = null;
+let supabaseClient = null;
 let supaOk = false;
 try{
   if(!SUPABASE_URL.includes('SEU-PROJETO')){
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     supaOk = true;
   }
 }catch(e){ console.error(e); }
@@ -286,11 +303,11 @@ async function loadAll(){
   if(supaOk){
     try{
       const [c,f,l,i,p] = await Promise.all([
-        supabase.from('clientes').select('*').order('criado_em',{ascending:false}),
-        supabase.from('ferramentas').select('*').order('criado_em',{ascending:false}),
-        supabase.from('locacoes').select('*').order('criado_em',{ascending:false}),
-        supabase.from('itens_locacao').select('*'),
-        supabase.from('pagamentos').select('*')
+        supabaseClient.from('clientes').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('ferramentas').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('locacoes').select('*').order('criado_em',{ascending:false}),
+        supabaseClient.from('itens_locacao').select('*'),
+        supabaseClient.from('pagamentos').select('*')
       ]);
       DB.clientes = c.data || [];
       DB.ferramentas = f.data || [];
@@ -438,7 +455,7 @@ function renderClientes(el){
     };
     if(id){
       if(supaOk){
-        const {error} = await supabase.from('clientes').update(dados).eq('id', id);
+        const {error} = await supabaseClient.from('clientes').update(dados).eq('id', id);
         if(error){ toast('Erro ao atualizar cliente', false); console.error(error); return; }
       } else {
         const c = DB.clientes.find(x=>x.id===id);
@@ -447,7 +464,7 @@ function renderClientes(el){
       toast('Cliente atualizado');
     } else {
       if(supaOk){
-        const {error} = await supabase.from('clientes').insert(dados);
+        const {error} = await supabaseClient.from('clientes').insert(dados);
         if(error){ toast('Erro ao salvar cliente', false); console.error(error); return; }
       } else {
         dados.id = uid(); dados.criado_em = new Date().toISOString();
@@ -500,7 +517,7 @@ function cancelarEdicaoCliente(){ render('clientes'); }
 async function excluirCliente(id){
   if(!confirm('Excluir este cliente? Essa ação não pode ser desfeita.')) return;
   if(supaOk){
-    const {error} = await supabase.from('clientes').delete().eq('id', id);
+    const {error} = await supabaseClient.from('clientes').delete().eq('id', id);
     if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
   } else {
     DB.clientes = DB.clientes.filter(x=>x.id!==id);
@@ -570,7 +587,7 @@ function renderFerramentas(el){
       dados.quantidade_total = qtd;
       dados.quantidade_disponivel = Math.max(0, atual.quantidade_disponivel + delta);
       if(supaOk){
-        const {error} = await supabase.from('ferramentas').update(dados).eq('id', id);
+        const {error} = await supabaseClient.from('ferramentas').update(dados).eq('id', id);
         if(error){ toast('Erro ao atualizar ferramenta', false); console.error(error); return; }
       } else {
         Object.assign(atual, dados);
@@ -580,7 +597,7 @@ function renderFerramentas(el){
       dados.quantidade_total = qtd;
       dados.quantidade_disponivel = qtd;
       if(supaOk){
-        const {error} = await supabase.from('ferramentas').insert(dados);
+        const {error} = await supabaseClient.from('ferramentas').insert(dados);
         if(error){ toast('Erro ao salvar ferramenta', false); console.error(error); return; }
       } else {
         dados.id = uid(); dados.criado_em = new Date().toISOString();
@@ -635,7 +652,7 @@ function cancelarEdicaoFerramenta(){ render('ferramentas'); }
 async function excluirFerramenta(id){
   if(!confirm('Excluir esta ferramenta? Essa ação não pode ser desfeita.')) return;
   if(supaOk){
-    const {error} = await supabase.from('ferramentas').delete().eq('id', id);
+    const {error} = await supabaseClient.from('ferramentas').delete().eq('id', id);
     if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
   } else {
     DB.ferramentas = DB.ferramentas.filter(x=>x.id!==id);
@@ -817,7 +834,7 @@ async function salvarLocacao(){
 
   let locacaoId, numero;
   if(supaOk){
-    const {data, error} = await supabase.from('locacoes').insert(locacaoObj).select().single();
+    const {data, error} = await supabaseClient.from('locacoes').insert(locacaoObj).select().single();
     if(error){ toast('Erro ao salvar locação', false); console.error(error); return; }
     locacaoId = data.id; numero = data.numero;
     const itens = carrinho.map(i=>{
@@ -825,10 +842,10 @@ async function salvarLocacao(){
       const valorUnit = calcularItemValor(f, tipo, dias);
       return {locacao_id: locacaoId, ferramenta_id: i.ferramenta_id, quantidade: i.quantidade, valor_unitario: valorUnit, subtotal: valorUnit*i.quantidade};
     });
-    const {error:e2} = await supabase.from('itens_locacao').insert(itens);
+    const {error:e2} = await supabaseClient.from('itens_locacao').insert(itens);
     if(e2) console.error(e2);
     if(caucao > 0){
-      await supabase.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento:'a definir'});
+      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento:'a definir'});
     }
   } else {
     locacaoId = uid(); numero = DB.locacoes.length + 1;
@@ -933,16 +950,16 @@ async function marcarDevolvida(id){
   const multa = calcularMulta(id, diasAtraso);
 
   if(supaOk){
-    const {error} = await supabase.from('locacoes').update({status:'devolvida', data_devolucao_real: hoje, valor_multa: multa}).eq('id', id);
+    const {error} = await supabaseClient.from('locacoes').update({status:'devolvida', data_devolucao_real: hoje, valor_multa: multa}).eq('id', id);
     if(error){ toast('Erro ao atualizar', false); return; }
     // devolve estoque
     const itens = DB.itens_locacao.filter(i=>i.locacao_id===id);
     for(const i of itens){
       const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      if(f) await supabase.from('ferramentas').update({quantidade_disponivel: f.quantidade_disponivel + i.quantidade}).eq('id', f.id);
+      if(f) await supabaseClient.from('ferramentas').update({quantidade_disponivel: f.quantidade_disponivel + i.quantidade}).eq('id', f.id);
     }
     if(multa > 0){
-      await supabase.from('pagamentos').insert({locacao_id: id, tipo:'multa', valor: multa, observacoes: `Multa por ${diasAtraso} dia(s) de atraso`});
+      await supabaseClient.from('pagamentos').insert({locacao_id: id, tipo:'multa', valor: multa, observacoes: `Multa por ${diasAtraso} dia(s) de atraso`});
     }
   } else {
     loc.status='devolvida'; loc.data_devolucao_real=hoje; loc.valor_multa=multa;
@@ -1091,12 +1108,20 @@ async function initAuth(){
     render('dashboard');
     return;
   }
-  const { data: { session } } = await supabase.auth.getSession();
-  if(session){
-    document.getElementById('app-shell').classList.remove('hidden');
-    render('dashboard');
-  } else {
+  try{
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(session){
+      document.getElementById('app-shell').classList.remove('hidden');
+      render('dashboard');
+    } else {
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+  }catch(err){
+    console.error('Erro ao verificar sessão:', err);
     document.getElementById('login-screen').classList.remove('hidden');
+    const errBox = document.getElementById('login-error');
+    errBox.textContent = 'Não foi possível conectar ao banco de dados. Verifique a conexão ou tente novamente.';
+    errBox.style.display = 'block';
   }
 }
 
@@ -1106,7 +1131,7 @@ document.getElementById('form-login').addEventListener('submit', async (e)=>{
   const senha = document.getElementById('login-senha').value;
   const errBox = document.getElementById('login-error');
   errBox.style.display = 'none';
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
   if(error){
     errBox.textContent = 'E-mail ou senha inválidos.';
     errBox.style.display = 'block';
@@ -1118,7 +1143,7 @@ document.getElementById('form-login').addEventListener('submit', async (e)=>{
 });
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
-  if(supaOk) await supabase.auth.signOut();
+  if(supaOk) await supabaseClient.auth.signOut();
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-email').value = '';
