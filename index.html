@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-  <link rel="manifest" href="manifest.json">
+  
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LocaObra — Gestão de Locação de Ferramentas</title>
@@ -1432,7 +1432,31 @@ function gerarTermoPDF(loc, tipo){
 /* ======================================================
    AUTENTICAÇÃO
    ====================================================== */
-async 
+
+  // Gerar manifest PWA inline
+  (function() {
+    var manifest = {
+      name: 'LocaObra',
+      short_name: 'LocaObra',
+      description: 'Gestão de Locação de Ferramentas',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#1E2023',
+      theme_color: '#E00000',
+      icons: [{
+        src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="%231E2023" stroke="%23E00000" stroke-width="6"/><text x="50" y="67" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="46" fill="%23E00000">L</text></svg>'),
+        sizes: '192x192',
+        type: 'image/svg+xml'
+      }]
+    };
+    var blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = url;
+    document.head.appendChild(link);
+  })();
+
   // ===== LANDING PAGE =====
   function entrarDemoLocaObra() {
     document.getElementById('landing-screen').style.display = 'none';
