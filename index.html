@@ -2,11 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LocaObra — Gestão de Locação de Ferramentas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
+  onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.0/umd/supabase.min.js';document.head.appendChild(s);"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
@@ -204,6 +207,111 @@ tr:hover td{background:#F2EFE8;}
 </head>
 <body>
 
+<!-- LANDING PAGE -->
+<div id="landing-screen" style="min-height:100vh;background:#1E2023;font-family:'Inter',sans-serif;display:flex;flex-direction:column;">
+
+  <!-- HERO -->
+  <div style="background:linear-gradient(135deg,#1E2023,#2A2D31);padding:40px 24px 32px;text-align:center;">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="64" height="64" style="margin-bottom:14px;">
+      <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="#E00000" stroke-width="6"/>
+      <text x="50" y="67" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="700" font-size="46" fill="#E00000">L</text>
+    </svg>
+    <h1 style="font-family:'Oswald',sans-serif;font-size:28px;color:white;font-weight:700;letter-spacing:1px;margin-bottom:4px;">
+      LOCA<span style="color:#E00000;">OBRA</span>
+    </h1>
+    <p style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">GESTÃO DE LOCAÇÃO DE FERRAMENTAS</p>
+    <p style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:24px;line-height:1.7;">
+      Controle completo do seu negócio de<br>locação de ferramentas e equipamentos
+    </p>
+    <button onclick="document.getElementById('landing-screen').style.display='none';document.getElementById('login-screen').classList.remove('hidden');" 
+      style="background:#E00000;color:white;border:none;border-radius:6px;padding:16px 32px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;">
+      ACESSAR SISTEMA
+    </button>
+    <button onclick="entrarDemoLocaObra()"
+      style="background:transparent;color:rgba(255,255,255,0.7);border:2px solid rgba(255,255,255,0.3);border-radius:6px;padding:13px 32px;font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;display:block;margin-left:auto;margin-right:auto;">
+      👀 VER DEMONSTRAÇÃO
+    </button>
+  </div>
+
+  <!-- FUNCIONALIDADES -->
+  <div style="background:white;padding:28px 20px;flex:1;">
+    <h2 style="font-family:'Oswald',sans-serif;font-size:17px;color:#1E2023;text-align:center;margin-bottom:18px;letter-spacing:0.5px;">O QUE O SISTEMA FAZ</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:480px;margin:0 auto 20px;">
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">🔧</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Catálogo de Ferramentas</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Cadastro completo com disponibilidade em tempo real</div>
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">📋</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Contratos em PDF</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Contrato, recibo e termo de devolução automáticos</div>
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">👷</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Cadastro de Clientes</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Histórico completo por cliente com locações</div>
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">💰</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Controle Financeiro</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Receita, multas por atraso e dashboard de resultados</div>
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">📲</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Lembretes WhatsApp</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Aviso automático de devolução para o cliente</div>
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
+        <div style="font-size:22px;margin-bottom:6px;">📊</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Dashboard em tempo real</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Locações ativas, receita e ferramentas disponíveis</div>
+      </div>
+    </div>
+
+    <!-- PLANOS -->
+    <h2 style="font-family:'Oswald',sans-serif;font-size:17px;color:#1E2023;text-align:center;margin-bottom:14px;letter-spacing:0.5px;">PLANOS E PREÇOS</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:480px;margin:0 auto;">
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">📐 BÁSICO</div><div style="font-size:11px;color:#6b7280;">1 usuário · 50 ferramentas · PDF</div></div>
+        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 49</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
+      </div>
+      <div style="border:3px solid #E00000;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;background:#fff5f5;">
+        <div>
+          <div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">🔧 PROFISSIONAL <span style="background:#E00000;color:white;font-size:9px;padding:1px 7px;border-radius:3px;">POPULAR</span></div>
+          <div style="font-size:11px;color:#6b7280;">3 usuários · Ilimitado · Relatórios</div>
+        </div>
+        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 89</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
+      </div>
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">🏢 EMPRESA</div><div style="font-size:11px;color:#6b7280;">Usuários ilimitados · Multi-filial</div></div>
+        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 149</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button onclick="assinarLocaObra()"
+        style="background:#E00000;color:white;border:none;border-radius:6px;padding:16px 32px;font-family:'Oswald',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;">
+        CONTRATAR — 7 DIAS GRÁTIS
+      </button>
+      <div style="margin-top:10px;font-size:11px;color:#6b7280;">Sem cartão · Cancele quando quiser</div>
+    </div>
+  </div>
+
+  <!-- RODAPÉ -->
+  <div style="background:#1E2023;padding:20px;text-align:center;">
+    <a href="https://wa.me/5524992096103?text=Olá! Quero saber mais sobre o LocaObra — sistema de gestão de locação de ferramentas" 
+      style="display:inline-block;background:#25d366;color:white;border-radius:6px;padding:10px 20px;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:1px;margin-bottom:12px;">
+      📲 FALAR NO WHATSAPP
+    </a>
+    <p style="font-size:10px;color:rgba(255,255,255,0.4);line-height:1.8;margin:0;">
+      Desenvolvido por <strong style="color:rgba(255,255,255,0.7);">Wilson Foster</strong><br>
+      Engenheiro Civil | Gestor de Produto<br>
+      comercial@fosterconstrucoes.com.br
+    </p>
+  </div>
+</div>
+
 <div class="login-wrap hidden" id="login-screen">
   <div class="login-card">
     <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -218,7 +326,10 @@ tr:hover td{background:#F2EFE8;}
       <button type="submit" class="btn btn-primary">Entrar</button>
       <div class="login-error" id="login-error">E-mail ou senha inválidos.</div>
     </form>
-    <div class="dev-signature">Desenvolvido por Foster Engenharia &amp; Construção</div>
+    <div class="dev-signature" style="margin-top:12px;">
+      Desenvolvido por Foster Engenharia & Construção<br>
+      <a href="https://wa.me/5524992096103" style="color:#E00000;font-size:11px;font-weight:700;">📲 Solicitar acesso</a>
+    </div>
   </div>
 </div>
 
@@ -1321,27 +1432,45 @@ function gerarTermoPDF(loc, tipo){
 /* ======================================================
    AUTENTICAÇÃO
    ====================================================== */
-async function initAuth(){
-  if(!supaOk){
-    // modo demo: sem login, entra direto
+async 
+  // ===== LANDING PAGE =====
+  function entrarDemoLocaObra() {
+    document.getElementById('landing-screen').style.display = 'none';
     document.getElementById('app-shell').classList.remove('hidden');
     render('dashboard');
+    // Banner demo
+    var banner = document.createElement('div');
+    banner.id = 'demoBanner';
+    banner.style.cssText = 'background:#E00000;color:white;text-align:center;padding:9px 16px;font-size:11px;font-weight:700;font-family:Oswald,sans-serif;letter-spacing:0.5px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:200;';
+    banner.innerHTML = '<span>⚠️ MODO DEMO — dados fictícios</span><button onclick="document.getElementById(\'landing-screen\').style.display=\'flex\';document.getElementById(\'app-shell\').classList.add(\'hidden\');this.closest(\'#demoBanner\').remove();" style="background:white;color:#E00000;border:none;border-radius:4px;padding:4px 10px;font-family:Oswald,sans-serif;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:0.5px;">VOLTAR</button>';
+    var appShell = document.getElementById('app-shell');
+    if (appShell && !document.getElementById('demoBanner')) appShell.insertBefore(banner, appShell.firstChild);
+  }
+
+  function assinarLocaObra() {
+    var msg = 'Olá Wilson! Quero contratar o LocaObra — sistema de gestão de locação de ferramentas.\n\nChave PIX: comercial@fosterconstrucoes.com.br\n\nAguardo informações sobre os planos!';
+    window.open('https://wa.me/5524992096103?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  async function initAuth(){
+  if(!supaOk){
+    // sem Supabase: mostra landing
+    document.getElementById('landing-screen').style.display = 'flex';
     return;
   }
   try{
     const { data: { session } } = await supabaseClient.auth.getSession();
     if(session){
+      document.getElementById('landing-screen').style.display = 'none';
       document.getElementById('app-shell').classList.remove('hidden');
       render('dashboard');
     } else {
-      document.getElementById('login-screen').classList.remove('hidden');
+      // Sem sessão: mostra landing
+      document.getElementById('landing-screen').style.display = 'flex';
     }
   }catch(err){
     console.error('Erro ao verificar sessão:', err);
-    document.getElementById('login-screen').classList.remove('hidden');
-    const errBox = document.getElementById('login-error');
-    errBox.textContent = 'Não foi possível conectar ao banco de dados. Verifique a conexão ou tente novamente.';
-    errBox.style.display = 'block';
+    document.getElementById('landing-screen').style.display = 'flex';
   }
 }
 
@@ -1363,7 +1492,9 @@ document.getElementById('form-login').addEventListener('submit', async (e)=>{
 });
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
-  if(supaOk) await supabaseClient.auth.signOut();
+  if(supaOk) await document.getElementById('app-shell').classList.add('hidden');
+    document.getElementById('landing-screen').style.display = 'flex';
+    supabaseClient.auth.signOut();
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-email').value = '';
