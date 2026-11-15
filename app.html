@@ -856,14 +856,65 @@ const FERRAMENTAS_COMUNS = [
   {nome:'Gerador de energia', categoria:'Energia', valor_diaria:100},
   {nome:'Carrinho de mão', categoria:'Manual', valor_diaria:10}
 ];
+// Catálogo para sugestões no cadastro (inclui os itens do cadastro rápido)
+const CATALOGO_FERRAMENTAS = [
+  ...FERRAMENTAS_COMUNS,
+  {nome:'Andaime fachadeiro', categoria:'Andaime', valor_diaria:4},
+  {nome:'Rodízio para andaime', categoria:'Andaime', valor_diaria:3},
+  {nome:'Plataforma tesoura (PTA)', categoria:'Elevação', valor_diaria:350},
+  {nome:'Guincho de coluna 400 kg', categoria:'Elevação', valor_diaria:70},
+  {nome:'Talha manual 1 t', categoria:'Elevação', valor_diaria:25},
+  {nome:'Escada extensível 7 m', categoria:'Acesso', valor_diaria:20},
+  {nome:'Escada de abrir 2 m', categoria:'Acesso', valor_diaria:10},
+  {nome:'Escora de madeira / metálica regulável', categoria:'Estrutura', valor_diaria:2},
+  {nome:'Forma para pilar', categoria:'Estrutura', valor_diaria:6},
+  {nome:'Martelete perfurador SDS', categoria:'Elétrica', valor_diaria:40},
+  {nome:'Martelete 10 kg', categoria:'Elétrica', valor_diaria:120},
+  {nome:'Serra circular', categoria:'Elétrica', valor_diaria:30},
+  {nome:'Serra mármore', categoria:'Elétrica', valor_diaria:30},
+  {nome:'Serra tico-tico', categoria:'Elétrica', valor_diaria:25},
+  {nome:'Parafusadeira a bateria', categoria:'Elétrica', valor_diaria:25},
+  {nome:'Lixadeira de parede (girafa)', categoria:'Elétrica', valor_diaria:60},
+  {nome:'Cortadora de piso', categoria:'Elétrica', valor_diaria:90},
+  {nome:'Extensão elétrica 30 m', categoria:'Energia', valor_diaria:10},
+  {nome:'Refletor LED de obra', categoria:'Energia', valor_diaria:12},
+  {nome:'Betoneira 150L', categoria:'Concretagem', valor_diaria:50},
+  {nome:'Régua vibratória', categoria:'Concretagem', valor_diaria:70},
+  {nome:'Alisadora de concreto (bambolê)', categoria:'Concretagem', valor_diaria:120},
+  {nome:'Placa vibratória', categoria:'Compactação', valor_diaria:90},
+  {nome:'Rolo compactador', categoria:'Compactação', valor_diaria:250},
+  {nome:'Bomba submersível', categoria:'Hidráulica', valor_diaria:40},
+  {nome:'Lavadora de alta pressão', categoria:'Limpeza', valor_diaria:50},
+  {nome:'Aspirador de pó industrial', categoria:'Limpeza', valor_diaria:40},
+  {nome:'Compressor de ar', categoria:'Pneumática', valor_diaria:80},
+  {nome:'Máquina de solda', categoria:'Solda', valor_diaria:60},
+  {nome:'Nível a laser', categoria:'Medição', valor_diaria:40},
+  {nome:'Carrinho de mão (girica)', categoria:'Manual', valor_diaria:10},
+  {nome:'Container / caçamba de entulho', categoria:'Entulho', valor_diaria:40}
+].filter((f, i, a) => a.findIndex(x => x.nome === f.nome) === i);
+
+// Próximo código livre no padrão FER-001, olhando o maior número já usado
+function proximoCodigo(deslocamento = 0){
+  const nums = DB.ferramentas.map(f => (String(f.codigo || '').match(/^FER-(\d+)$/i) || [])[1]).filter(Boolean).map(Number);
+  const prox = (nums.length ? Math.max(...nums) : 0) + 1 + deslocamento;
+  return `FER-${String(prox).padStart(3, '0')}`;
+}
+// Ao escolher um nome da lista, preenche categoria e diária se estiverem vazias
+function sugerirPorNome(){
+  const nome = document.getElementById('fer-nome').value.trim().toLowerCase();
+  const item = CATALOGO_FERRAMENTAS.find(f => f.nome.toLowerCase() === nome);
+  if(!item) return;
+  const cat = document.getElementById('fer-cat'), dia = document.getElementById('fer-diaria');
+  if(!cat.value) cat.value = item.categoria;
+  if(!dia.value) dia.value = item.valor_diaria;
+}
 
 async function cadastrarComuns(){
   const marcados = Array.from(document.querySelectorAll('.chk-comum:checked')).map(el=>Number(el.dataset.idx));
   if(!marcados.length){ toast('Selecione ao menos uma ferramenta', false); return; }
-  let proximoNumero = DB.ferramentas.length + 1;
-  const novos = marcados.map(idx=>{
+  const novos = marcados.map((idx, n)=>{
     const f = FERRAMENTAS_COMUNS[idx];
-    const codigo = `FER-${String(proximoNumero++).padStart(3,'0')}`;
+    const codigo = proximoCodigo(n);
     return {
       codigo, nome: f.nome, categoria: f.categoria,
       valor_diaria: f.valor_diaria, valor_semanal: null, valor_mensal: null, valor_reposicao: null,
@@ -902,10 +953,13 @@ function renderFerramentas(el){
         <form id="form-ferramenta">
           <input type="hidden" id="fer-id" value="">
           <div class="row">
-            <div class="field"><label>Código</label><input id="fer-cod" placeholder="FER-001" required></div>
-            <div class="field"><label>Categoria</label><input id="fer-cat" placeholder="Elétrica, manual, andaime..."></div>
+            <div class="field"><label for="fer-cod">Código</label><input id="fer-cod" list="lista-codigos" value="${proximoCodigo()}" required autocomplete="off"></div>
+            <div class="field"><label for="fer-cat">Categoria</label><input id="fer-cat" list="lista-categorias" placeholder="Elétrica, manual, andaime..." autocomplete="off"></div>
           </div>
-          <div class="field"><label>Nome</label><input id="fer-nome" placeholder="Furadeira de impacto Bosch" required></div>
+          <div class="field"><label for="fer-nome">Nome</label><input id="fer-nome" list="lista-nomes" placeholder="Comece a digitar ou escolha da lista" required autocomplete="off" oninput="sugerirPorNome()"></div>
+          <datalist id="lista-nomes">${[...new Set([...CATALOGO_FERRAMENTAS.map(f => f.nome), ...DB.ferramentas.map(f => f.nome)])].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n => `<option value="${esc(n)}"></option>`).join('')}</datalist>
+          <datalist id="lista-categorias">${[...new Set([...CATALOGO_FERRAMENTAS.map(f => f.categoria), ...DB.ferramentas.map(f => f.categoria).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>
+          <datalist id="lista-codigos"><option value="${proximoCodigo()}">próximo código livre</option>${DB.ferramentas.map(f => `<option value="${esc(f.codigo)}">${esc(f.nome)} (já usado)</option>`).join('')}</datalist>
           <div class="row">
             <div class="field"><label>Valor diária (R$)</label><input id="fer-diaria" type="number" step="0.01" required></div>
             <div class="field"><label>Valor semanal (R$) — opcional</label><input id="fer-semanal" type="number" step="0.01"></div>
@@ -1391,7 +1445,29 @@ async function renderUsuarios(el){
         <div id="lista-usuarios">${listaUsuariosHTML(usuarios)}</div>
       </div>
     </div>
+    <div class="panel" style="max-width:520px;">
+      <h2>Trocar minha senha</h2>
+      <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Você está logado como <b>${esc(usuarioLogado)}</b>. Os outros aparelhos onde você está logado serão desconectados.</div>
+      <form id="form-senha">
+        <div class="field"><label for="senha-atual">Senha atual</label><input id="senha-atual" type="password" required autocomplete="current-password"></div>
+        <div class="field"><label for="senha-nova">Nova senha</label><input id="senha-nova" type="password" required minlength="8" autocomplete="new-password" placeholder="mínimo 8 caracteres"></div>
+        <div class="field"><label for="senha-conf">Repita a nova senha</label><input id="senha-conf" type="password" required minlength="8" autocomplete="new-password"></div>
+        <button type="submit" class="btn btn-primary">Trocar senha</button>
+      </form>
+    </div>
   `;
+
+  document.getElementById('form-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const atual = document.getElementById('senha-atual').value;
+    const nova = document.getElementById('senha-nova').value;
+    if(nova !== document.getElementById('senha-conf').value){ toast('As duas senhas novas não são iguais', false); return; }
+    if(nova === atual){ toast('A nova senha precisa ser diferente da atual', false); return; }
+    const r = await apiFetch('/api/senha', { method: 'POST', body: JSON.stringify({ atual, nova }) });
+    if(!r.ok){ toast(r.data?.message || 'Não foi possível trocar a senha', false); return; }
+    e.target.reset();
+    toast('Senha trocada com sucesso');
+  });
 
   const formUsu = document.getElementById('form-usuario');
   if(formUsu) formUsu.addEventListener('submit', async (e) => {
