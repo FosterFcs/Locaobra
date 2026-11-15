@@ -199,6 +199,24 @@ tr:hover td{background:#F2EFE8;}
 .wordmark svg{width:40px; height:40px;}
 .wordmark span{font-family:'Bebas Neue','Archivo Black',sans-serif; font-size:34px; color:var(--ink); letter-spacing:0.02em;}
 .logo-preview{max-width:180px; max-height:90px; display:block; margin:8px 0; border:1px solid var(--line); border-radius:6px; background:#fff; padding:4px;}
+.aviso-plano{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; padding:12px 14px; border-radius:var(--radius); margin-bottom:16px; font-size:14px; border:1px solid;}
+.aviso-plano.alerta{background:#FDEBD3; border-color:#F0D19A; color:var(--ink);}
+.aviso-plano.bloqueio{background:#FBE4E4; border-color:#E9A9A9; color:#7A1A1A;}
+.aviso-plano .acoes{display:flex; gap:8px; flex-wrap:wrap;}
+.planos-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin:14px 0;}
+.plano-card{border:2px solid var(--line); border-radius:10px; padding:16px; background:#fff; cursor:pointer; position:relative;}
+.plano-card.sel{border-color:var(--amber); box-shadow:0 0 0 3px color-mix(in srgb, var(--amber) 20%, transparent);}
+.plano-card h3{font-size:18px; margin-bottom:4px;}
+.plano-card .preco{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; margin:6px 0;}
+.plano-card .preco small{font-size:13px; font-weight:400; color:var(--ink-soft);}
+.plano-card ul{margin:8px 0 0 18px; font-size:13.5px; color:var(--ink-soft);}
+.plano-card .selo{position:absolute; top:-10px; right:12px; background:var(--amber); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; text-transform:uppercase; letter-spacing:.04em;}
+.ciclo-toggle{display:inline-flex; border:1px solid var(--line); border-radius:99px; overflow:hidden;}
+.ciclo-toggle button{border:none; background:none; padding:7px 16px; cursor:pointer; font:inherit; font-size:13.5px;}
+.ciclo-toggle button.on{background:var(--charcoal); color:#fff;}
+.status-plano{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:6px;}
+.status-plano div{background:var(--concrete-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+.status-plano b{display:block; font-size:15px; margin-top:2px;}
 .teste-aviso{font-size:12.5px; background:#FDEBD3; border:1px solid #F0D19A; color:var(--ink); padding:8px 12px; border-radius:var(--radius); margin-bottom:14px;}
 .logout-btn{
   width:100%; margin:0; padding:9px 12px; border-radius:var(--radius); background:none; border:1px solid #3A3D42;
@@ -350,6 +368,7 @@ tr:hover td{background:#F2EFE8;}
       <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
       <button class="nav-btn" data-view="usuarios"><span class="icon">◈</span><span class="label">Usuários</span></button>
       <button class="nav-btn admin-only" data-view="empresa"><span class="icon">⚙</span><span class="label">Minha empresa</span></button>
+      <button class="nav-btn admin-only" data-view="plano"><span class="icon">★</span><span class="label">Plano</span></button>
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" id="backup-btn" style="margin-bottom:6px;" onclick="exportarBackup()">⬇ Backup dos dados</button>
@@ -607,7 +626,7 @@ async function loadAll(){
    ====================================================== */
 const titles = {
   dashboard:'Dashboard', clientes:'Clientes', ferramentas:'Ferramentas',
-  'nova-locacao':'Nova Locação', locacoes:'Locações', usuarios:'Usuários', empresa:'Minha empresa'
+  'nova-locacao':'Nova Locação', locacoes:'Locações', usuarios:'Usuários', empresa:'Minha empresa', plano:'Plano e pagamento'
 };
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -644,8 +663,142 @@ async function render(view){
   else if(view === 'ferramentas') renderFerramentas(el);
   else if(view === 'nova-locacao') renderNovaLocacao(el);
   else if(view === 'locacoes') renderLocacoes(el);
-  else if(view === 'usuarios') renderUsuarios(el);
+  else if(view === 'usuarios') await renderUsuarios(el);
   else if(view === 'empresa') renderEmpresa(el);
+  else if(view === 'plano') await renderPlano(el);
+  if(view !== 'plano') el.insertAdjacentHTML('afterbegin', avisoPlano());
+}
+
+/* ======================================================
+   PLANO E PAGAMENTO (Asaas)
+   ====================================================== */
+const NOME_PLANO = { essencial: 'Essencial', profissional: 'Profissional' };
+const NOME_STATUS = { pendente: 'Aguardando pagamento', ativa: 'Ativa', vencida: 'Vencida', cancelada: 'Cancelada', estornada: 'Estornada' };
+
+function avisoPlano(){
+  if(!supaOk || !EMPRESA || !EMPRESA.plano) return '';
+  const e = EMPRESA, admin = PAPEL === 'admin';
+  const botaoPlanos = admin ? `<button class="btn btn-dark btn-sm" onclick="document.querySelector('[data-view=plano]').click()">Ver planos</button>` : '';
+  const botaoFatura = e.fatura_url ? `<a class="btn btn-primary btn-sm" href="${esc(e.fatura_url)}" target="_blank" rel="noopener">Pagar fatura</a>` : '';
+  if(e.acesso_liberado === false){
+    return `<div class="aviso-plano bloqueio" role="alert"><span><b>${esc(e.motivo_bloqueio || 'Acesso bloqueado.')}</b> Seus dados continuam guardados e você ainda pode consultá-los.${admin ? '' : ' Avise o administrador da empresa.'}</span><span class="acoes">${botaoFatura}${botaoPlanos}</span></div>`;
+  }
+  if(e.plano === 'teste' && e.dias_teste !== null && e.dias_teste <= 10){
+    const txt = e.dias_teste === 0 ? 'Seu teste grátis termina hoje.' : `Faltam ${e.dias_teste} dia(s) do seu teste grátis.`;
+    const ja = e.assinatura_status === 'pendente' ? ' Sua assinatura já está pronta: a 1ª cobrança vence no fim do teste.' : '';
+    return `<div class="aviso-plano alerta"><span>${txt}${ja}</span><span class="acoes">${botaoFatura}${e.assinatura_status === 'pendente' ? '' : botaoPlanos}</span></div>`;
+  }
+  if(e.assinatura_status === 'vencida' && e.fatura_url){
+    return `<div class="aviso-plano alerta"><span>Há uma fatura vencida. Pague para não perder o acesso.</span><span class="acoes">${botaoFatura}</span></div>`;
+  }
+  return '';
+}
+
+async function atualizarPlano(){
+  const r = await apiFetch('/api/assinatura');
+  if(r.ok){ aplicarEmpresa(r.data); return true; }
+  return false;
+}
+
+let CICLO_ESCOLHIDO = 'anual', PLANO_ESCOLHIDO = 'essencial';
+async function renderPlano(el){
+  if(!supaOk){ el.innerHTML = `${configNote()}<div class="empty">Indisponível no modo demonstração.</div>`; return; }
+  el.innerHTML = '<div class="empty">Carregando planos…</div>';
+  const [rp] = await Promise.all([fetch(`${API_BASE_URL}/api/planos`).then(r => r.json()).catch(() => null), atualizarPlano()]);
+  const e = EMPRESA;
+  if(!rp || !rp.planos){ el.innerHTML = '<div class="empty">Não foi possível carregar os planos. Tente de novo.</div>'; return; }
+  const P = Object.fromEntries(rp.planos.map(p => [p.id, p]));
+  if(e.assinatura_plano) PLANO_ESCOLHIDO = e.assinatura_plano;
+  if(e.assinatura_ciclo) CICLO_ESCOLHIDO = e.assinatura_ciclo;
+  const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  let situacao;
+  if(e.plano === 'ativo') situacao = 'Liberada pelo suporte';
+  else if(e.plano === 'teste') situacao = e.acesso_liberado ? `Teste grátis (${e.dias_teste} dia(s) restantes)` : 'Teste encerrado';
+  else situacao = e.acesso_liberado ? 'Assinante' : 'Bloqueada';
+  const status = `
+    <div class="panel">
+      <h2>Sua situação</h2>
+      ${avisoPlano()}
+      <div class="status-plano">
+        <div>Conta<b>${situacao}</b></div>
+        <div>Plano<b>${e.assinatura_plano ? NOME_PLANO[e.assinatura_plano] + ' · ' + (e.assinatura_ciclo === 'anual' ? 'anual' : 'mensal') : '—'}</b></div>
+        <div>Assinatura<b>${NOME_STATUS[e.assinatura_status] || '—'}</b></div>
+        <div>${e.plano === 'teste' && !e.pago_ate ? 'Teste até' : 'Pago até'}<b>${e.plano === 'teste' && !e.pago_ate ? fmtDate(e.teste_ate) : (e.pago_ate ? fmtDate(e.pago_ate) : '—')}</b></div>
+      </div>
+      ${e.fundador ? `<div class="teste-aviso" style="margin-top:10px;">Você é <b>cliente fundador</b>: seu preço está travado até <b>${fmtDate(e.preco_travado_ate)}</b>.</div>` : ''}
+      <div class="actions-cell" style="margin-top:12px; flex-wrap:wrap;">
+        ${e.fatura_url ? `<a class="btn btn-primary" href="${esc(e.fatura_url)}" target="_blank" rel="noopener">Abrir fatura (Pix, boleto ou cartão)</a>` : ''}
+        ${e.assinatura_id || e.assinatura_status ? `<button class="btn btn-outline" id="btn-ja-paguei">Já paguei — atualizar</button>` : ''}
+        ${e.assinatura_status && e.assinatura_status !== 'cancelada' ? `<button class="btn btn-danger" id="btn-cancelar-ass">Cancelar assinatura</button>` : ''}
+      </div>
+    </div>`;
+
+  if(e.plano === 'ativo'){
+    el.innerHTML = status + `<div class="panel"><div class="empty">Sua conta foi liberada pelo suporte da Foster Tech. Não é preciso assinar.</div></div>`;
+    return;
+  }
+
+  const card = id => {
+    const p = P[id], mensalEq = CICLO_ESCOLHIDO === 'anual' ? p.anual / 12 : p.mensal;
+    return `<div class="plano-card ${PLANO_ESCOLHIDO === id ? 'sel' : ''}" data-plano="${id}" tabindex="0" role="radio" aria-checked="${PLANO_ESCOLHIDO === id}">
+      ${id === 'profissional' ? '<span class="selo">Mais completo</span>' : ''}
+      <h3>${p.nome}</h3>
+      <div class="preco">${brl(mensalEq)}<small>/mês</small></div>
+      <div style="font-size:12.5px; color:var(--ink-soft);">${CICLO_ESCOLHIDO === 'anual' ? `${brl(p.anual)} cobrados uma vez por ano` : 'cobrado todo mês'}</div>
+      <ul>
+        <li>Até ${p.usuarios} usuários</li>
+        <li>Locações e ferramentas ilimitadas</li>
+        <li>Contrato e termos em PDF com sua marca</li>
+        ${id === 'profissional' ? '<li>Novos recursos primeiro (cobrança Pix ao cliente)</li>' : '<li>Lembrete de devolução por WhatsApp</li>'}
+      </ul>
+    </div>`;
+  };
+
+  el.innerHTML = status + `
+    <div class="panel">
+      <h2>Escolha seu plano</h2>
+      ${rp.vagas_fundador > 0 && !e.fundador ? `<div class="teste-aviso">Lançamento: restam <b>${rp.vagas_fundador}</b> vagas de <b>preço de fundador</b> (valor travado por 12 meses).</div>` : ''}
+      <div class="ciclo-toggle" role="group" aria-label="Forma de cobrança">
+        <button type="button" data-ciclo="mensal" class="${CICLO_ESCOLHIDO === 'mensal' ? 'on' : ''}">Mensal</button>
+        <button type="button" data-ciclo="anual" class="${CICLO_ESCOLHIDO === 'anual' ? 'on' : ''}">Anual (economize 20%)</button>
+      </div>
+      <div class="planos-grid">${card('essencial')}${card('profissional')}</div>
+      <form id="form-assinar">
+        <div class="row">
+          <div class="field"><label for="ass-doc">CNPJ da locadora (ou CPF)</label><input id="ass-doc" inputmode="numeric" required value="${esc(e.cnpj || '')}" placeholder="00.000.000/0000-00"></div>
+          <div class="field"><label for="ass-nome">Nome do responsável</label><input id="ass-nome" value="${esc(e.nome || '')}"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">${e.plano === 'teste' && e.acesso_liberado ? 'Assinar (1ª cobrança só no fim do teste)' : 'Assinar e gerar fatura'}</button>
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;">Pagamento pelo Asaas: Pix, boleto ou cartão. Sem fidelidade, cancele quando quiser.</div>
+      </form>
+    </div>`;
+
+  el.querySelectorAll('[data-ciclo]').forEach(b => b.addEventListener('click', () => { CICLO_ESCOLHIDO = b.dataset.ciclo; renderPlano(el); }));
+  el.querySelectorAll('.plano-card').forEach(c => {
+    const escolher = () => { PLANO_ESCOLHIDO = c.dataset.plano; el.querySelectorAll('.plano-card').forEach(x => { x.classList.toggle('sel', x === c); x.setAttribute('aria-checked', x === c); }); };
+    c.addEventListener('click', escolher);
+    c.addEventListener('keydown', ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); escolher(); } });
+  });
+  const jaPaguei = document.getElementById('btn-ja-paguei');
+  if(jaPaguei) jaPaguei.addEventListener('click', async () => { await atualizarPlano(); toast(EMPRESA.assinatura_status === 'ativa' ? 'Pagamento confirmado!' : 'Ainda não recebemos a confirmação. Pix confirma em minutos; boleto em até 2 dias úteis.'); renderPlano(el); });
+  const cancelar = document.getElementById('btn-cancelar-ass');
+  if(cancelar) cancelar.addEventListener('click', async () => {
+    if(!confirm('Cancelar a assinatura? Você continua usando até o fim do período já pago.')) return;
+    const r = await apiFetch('/api/assinatura/cancelar', { method: 'POST' });
+    if(!r.ok){ toast(r.data?.message || 'Não foi possível cancelar', false); return; }
+    aplicarEmpresa(r.data); toast('Assinatura cancelada'); renderPlano(el);
+  });
+  document.getElementById('form-assinar').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Gerando fatura…';
+    const r = await apiFetch('/api/assinatura', { method: 'POST', body: JSON.stringify({
+      plano: PLANO_ESCOLHIDO, ciclo: CICLO_ESCOLHIDO, cpf_cnpj: document.getElementById('ass-doc').value, nome: document.getElementById('ass-nome').value }) });
+    if(!r.ok){ toast(r.data?.message || 'Não foi possível assinar', false); btn.disabled = false; btn.textContent = 'Assinar'; return; }
+    if(r.data.empresa) aplicarEmpresa(r.data.empresa); else await atualizarPlano();
+    toast(r.data.reaproveitada ? 'Você já tem uma fatura aberta para este plano.' : 'Assinatura criada! Abra a fatura para pagar.');
+    renderPlano(el);
+  });
 }
 
 /* ======================================================
@@ -1518,7 +1671,7 @@ async function excluirUsuario(id){
 function renderEmpresa(el){
   if(!supaOk){ el.innerHTML = `${configNote()}<div class="empty">Indisponível no modo demonstração.</div>`; return; }
   const e = EMPRESA;
-  const teste = e.plano === 'teste' && e.teste_ate ? `<div class="teste-aviso">Período de teste grátis até <b>${fmtDate(e.teste_ate)}</b>.</div>` : '';
+  const teste = e.plano === 'teste' && e.teste_ate ? `<div class="teste-aviso">Período de teste grátis até <b>${fmtDate(e.teste_ate)}</b>. Veja os planos no menu <b>Plano</b>.</div>` : '';
   el.innerHTML = `
     ${teste}
     <div class="grid grid-2">
@@ -2008,6 +2161,8 @@ document.getElementById('form-cadastro').addEventListener('submit', async (e) =>
    INIT
    ====================================================== */
 initAuth();
+// link "app.html#cadastro" (da página inicial) abre direto o cadastro da locadora
+if(location.hash === '#cadastro' && !localStorage.getItem('lo_session')) mostrarCadastro(true);
 </script>
 </body>
 </html>
