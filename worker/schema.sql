@@ -119,3 +119,5 @@ CREATE INDEX IF NOT EXISTS idx_locacoes_cliente ON locacoes(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_itens_empresa ON itens_locacao(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_itens_locacao ON itens_locacao(locacao_id);
 CREATE INDEX IF NOT EXISTS idx_pagamentos_empresa ON pagamentos(empresa_id);
+-- código da ferramenta único por empresa, sem diferenciar maiúsculas
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ferramentas_codigo_unico ON ferramentas(empresa_id, UPPER(TRIM(codigo)));
