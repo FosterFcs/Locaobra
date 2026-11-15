@@ -953,7 +953,7 @@ function renderFerramentas(el){
         <form id="form-ferramenta">
           <input type="hidden" id="fer-id" value="">
           <div class="row">
-            <div class="field"><label for="fer-cod">Código</label><input id="fer-cod" list="lista-codigos" value="${proximoCodigo()}" required autocomplete="off"></div>
+            <div class="field"><label for="fer-cod">Código</label><input id="fer-cod" list="lista-codigos" value="${proximoCodigo()}" required autocomplete="off" style="text-transform:uppercase"></div>
             <div class="field"><label for="fer-cat">Categoria</label><input id="fer-cat" list="lista-categorias" placeholder="Elétrica, manual, andaime..." autocomplete="off"></div>
           </div>
           <div class="field"><label for="fer-nome">Nome</label><input id="fer-nome" list="lista-nomes" placeholder="Comece a digitar ou escolha da lista" required autocomplete="off" oninput="sugerirPorNome()"></div>
@@ -989,8 +989,11 @@ function renderFerramentas(el){
     e.preventDefault();
     const id = document.getElementById('fer-id').value;
     const qtd = Number(document.getElementById('fer-qtd').value);
+    const codigoDigitado = document.getElementById('fer-cod').value.trim().toUpperCase();
+    const repetido = DB.ferramentas.find(f => f.id !== id && String(f.codigo || '').trim().toUpperCase() === codigoDigitado);
+    if(repetido){ toast(`O código ${codigoDigitado} já é usado em "${repetido.nome}". Use ${proximoCodigo()}.`, false); return; }
     const dados = {
-      codigo: document.getElementById('fer-cod').value,
+      codigo: codigoDigitado,
       categoria: document.getElementById('fer-cat').value,
       nome: document.getElementById('fer-nome').value,
       valor_diaria: Number(document.getElementById('fer-diaria').value),
