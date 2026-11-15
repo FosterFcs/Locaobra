@@ -16,7 +16,19 @@ CREATE TABLE IF NOT EXISTS empresas (
   proximo_numero INTEGER NOT NULL DEFAULT 1,  -- numeração de contratos por empresa
   plano TEXT NOT NULL DEFAULT 'teste',        -- teste | ativo | suspenso
   teste_ate TEXT,
-  criado_em TEXT DEFAULT (datetime('now'))
+  criado_em TEXT DEFAULT (datetime('now')),
+  -- assinatura (Asaas)
+  cpf_cnpj TEXT,
+  asaas_customer_id TEXT,
+  assinatura_id TEXT,
+  assinatura_plano TEXT,                      -- essencial | profissional
+  assinatura_ciclo TEXT,                      -- mensal | anual
+  assinatura_status TEXT,                     -- pendente | ativa | vencida | cancelada | estornada
+  pago_ate TEXT,
+  fatura_url TEXT,
+  fundador INTEGER NOT NULL DEFAULT 0,
+  preco_travado_ate TEXT,
+  ultimo_sync INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -110,6 +122,12 @@ CREATE TABLE IF NOT EXISTS pagamentos (
   observacoes TEXT
 );
 
+CREATE TABLE IF NOT EXISTS eventos_asaas (
+  id TEXT PRIMARY KEY,
+  criado_em TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_empresas_assinatura ON empresas(assinatura_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_empresa ON usuarios(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expira ON sessions(expira_em);
 CREATE INDEX IF NOT EXISTS idx_clientes_empresa ON clientes(empresa_id);
