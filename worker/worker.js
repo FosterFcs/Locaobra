@@ -61,14 +61,27 @@ async function gerarHashSenha(senha){
   const h = await pbkdf2(senha, salt, PBKDF2_ITERACOES);
   return `pbkdf2$${PBKDF2_ITERACOES}$${salt}$${h}`;
 }
-async function conferirSenha(senha, armazenado){
-  const [tipo, it, salt, h] = String(armazenado).split('$');
-  if(tipo !== 'pbkdf2' || !salt || !h) return false;
-  const calc = await pbkdf2(senha, salt, Number(it));
-  if(calc.length !== h.length) return false;
+function iguais(a, b){
+  if(a.length !== b.length) return false;
   let dif = 0;
-  for(let i = 0; i < calc.length; i++) dif |= calc.charCodeAt(i) ^ h.charCodeAt(i);
+  for(let i = 0; i < a.length; i++) dif |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return dif === 0;
+}
+async function conferirSenha(senha, armazenado){
+  const partes = String(armazenado).split('$');
+  if(partes[0] === 'pbkdf2'){
+    const [, it, salt, h] = partes;
+    if(!salt || !h) return false;
+    return iguais(await pbkdf2(senha, salt, Number(it)), h);
+  }
+  if(partes[0] === 'sha256'){
+    // formato antigo (sistemas migrados): SHA-256(salt + senha). Trocado por PBKDF2 no login.
+    const [, salt, h] = partes;
+    if(!salt || !h) return false;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + senha));
+    return iguais(hex(buf), h);
+  }
+  return false;
 }
 function validarSenha(s){
   if(typeof s !== 'string' || s.length < 8) throw new Erro(400, 'A senha deve ter ao menos 8 caracteres');
@@ -159,6 +172,10 @@ async function rotear(request, env, url){
     if(!email || !b.password) throw new Erro(400, 'E-mail e senha obrigatórios');
     const u = await env.DB.prepare('SELECT * FROM usuarios WHERE email = ?1').bind(email).first();
     if(!u || !(await conferirSenha(b.password, u.senha_hash))) throw new Erro(401, 'E-mail ou senha inválidos');
+    if(!String(u.senha_hash).startsWith('pbkdf2$')){
+      // senha veio de um sistema antigo: regrava no formato seguro
+      await env.DB.prepare('UPDATE usuarios SET senha_hash = ?1 WHERE id = ?2').bind(await gerarHashSenha(b.password), u.id).run();
+    }
     await env.DB.prepare('DELETE FROM sessions WHERE expira_em < ?1').bind(new Date().toISOString()).run();
     const token = await criarSessao(env, u.id, u.empresa_id);
     return [200, { token, user: { email: u.email, nome: u.nome, papel: u.papel }, empresa: await empresaPublica(env, u.empresa_id) }];
