@@ -154,6 +154,13 @@ section{padding:80px 0}
 .nota-planos{font-size:14px;color:var(--soft);margin-top:18px;max-width:760px}
 @media (max-width:640px){.planos{grid-template-columns:1fr}}
 
+/* equipamentos */
+.equip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.equip div{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px 8px 12px;text-align:center;font-size:13.5px;font-weight:600;line-height:1.25}
+.equip svg{display:block;margin:0 auto 8px;width:56px;height:56px}
+@media (max-width:900px){.equip{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:520px){.equip{grid-template-columns:repeat(3,1fr)}.equip svg{width:44px;height:44px}}
+
 /* faq */
 .faq{max-width:780px}
 .faq details{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px}
@@ -243,7 +250,21 @@ footer .ass{color:#C9CCD1}
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg></div><h3>Lembrete por WhatsApp</h3><p>Um toque e a mensagem de devolução já vai pronta para o cliente, com as ferramentas e a data de devolução.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><h3>Cadastro rápido</h3><p>Lista com os equipamentos mais comuns de obra. Marque o que você tem e cadastre tudo de uma vez.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 5a3 3 0 0 1 0 6M21.5 20a5.5 5.5 0 0 0-3.5-5"/></svg></div><h3>Equipe com permissão</h3><p>Dono como administrador e funcionários como operadores. Cada um com seu login e senha.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3"/></svg></div><h3>Cobrança por Pix</h3><p>QR Code e Pix copia e cola com o valor da locação, enviados ao cliente pelo WhatsApp. O dinheiro cai direto na sua conta.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><h3>No celular e no computador</h3><p>Use no balcão, no depósito ou na obra. Sem instalar nada: é só entrar pelo navegador.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></div><h3>Backup dos dados</h3><p>Baixe uma cópia completa dos seus clientes, ferramentas e locações quando quiser.</p></div>
     </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="tit" style="margin-bottom:24px">
+      <div class="k">Seu estoque</div>
+      <h2>Para todo tipo de equipamento de obra</h2>
+      <p>Cada ferramenta aparece com uma ilustração própria, para achar tudo rápido no estoque.</p>
+    </div>
+    <div class="equip" id="equip"></div>
   </div>
 </section>
 
@@ -320,6 +341,7 @@ footer .ass{color:#C9CCD1}
           <li>Contrato, recibo e termos em PDF com sua marca</li>
           <li>Controle de atrasos e multa</li>
           <li>Lembrete de devolução por WhatsApp</li>
+          <li>Pix com QR Code na sua chave</li>
         </ul>
         <a class="btn btn-out" href="app.html#cadastro">Testar grátis</a>
       </div>
@@ -332,7 +354,7 @@ footer .ass{color:#C9CCD1}
         <ul>
           <li>Tudo do Essencial</li>
           <li>Equipe maior, com administrador e operadores</li>
-          <li>Novos recursos primeiro (cobrança Pix ao cliente)</li>
+          <li>Pix com baixa automática na sua conta Asaas</li>
         </ul>
         <a class="btn btn-red" href="app.html#cadastro">Testar grátis</a>
       </div>
@@ -350,6 +372,7 @@ footer .ass{color:#C9CCD1}
       <details><summary>O que acontece quando o teste acaba?</summary><p>Se não assinar, a conta fica em modo de consulta: você continua vendo seus dados, mas não cadastra novas locações até escolher um plano. Nada é apagado.</p></details>
       <details><summary>Meus dados ficam separados das outras locadoras?</summary><p>Sim. Cada locadora tem a sua conta e só enxerga os próprios clientes, ferramentas e contratos. As senhas são protegidas com criptografia.</p></details>
       <details><summary>Consigo tirar meus dados do sistema?</summary><p>Sim. O botão "Backup dos dados" baixa uma cópia completa a qualquer momento.</p></details>
+      <details><summary>Como funciona a cobrança por Pix?</summary><p>No plano Essencial, o sistema gera o QR Code com a sua chave Pix e você confirma o recebimento com um toque. No Profissional, você conecta a sua conta Asaas e o pagamento entra sozinho na locação. Nos dois casos o dinheiro vai direto para a sua conta; o LocaObra não cobra taxa sobre o Pix.</p></details>
       <details><summary>Posso colocar o logo da minha empresa?</summary><p>Pode. Em "Minha empresa" você envia o logo e escolhe a cor. Eles aparecem no sistema e em todos os documentos em PDF.</p></details>
       <details><summary>O contrato do sistema tem validade jurídica?</summary><p>O LocaObra gera um modelo de contrato com cláusulas gerais de locação. Recomendamos que você revise o texto com o seu advogado ou contador para adequar à realidade da sua locadora.</p></details>
     </div>
@@ -385,7 +408,14 @@ footer .ass{color:#C9CCD1}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 2.5 1 3 .8 3.6.8.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>
 </a>
 
+<script src="ilustracoes.js"></script>
 <script>
+(function(){
+  try{
+    var itens = ['Andaime tubular','Betoneira','Martelete rompedor','Escora metálica','Compactador de solo','Gerador de energia','Furadeira de impacto','Serra mármore','Placa vibratória','Escada extensível','Plataforma tesoura','Carrinho de mão'];
+    document.getElementById('equip').innerHTML = itens.map(function(n){ return '<div>' + ilustracao(n, 56, n) + n + '</div>'; }).join('');
+  }catch(e){ var q = document.getElementById('equip'); if(q) q.closest('section').style.display = 'none'; }
+})();
 (function(){
   var API = 'https://locaobra-worker.fosterconstrutora.workers.dev';
   var P = { essencial:{usuarios:2,mensal:49.90,anual:478.80}, profissional:{usuarios:5,mensal:89.90,anual:838.80} };

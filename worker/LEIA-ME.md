@@ -44,3 +44,9 @@ Abra `https://fosterfcs.github.io/Locaobra/app.html` → **Criar conta da minha 
 | `POST /api/locacoes/:id/devolver` | devolução completa |
 
 As rotas antigas (`/api/clientes`, `/api/ferramentas` etc.) continuam iguais para o app.
+
+## Pix da locadora (nov/2026)
+- Rodar `migracao-pix.sql` uma vez no `locaobra-db` (já aplicada em produção).
+- Novo segredo no Worker: `CRIPTO_CHAVE` (Segredo) — 32 bytes em base64. Guarda criptografadas as chaves de API do Asaas das locadoras. **Não trocar depois de configurado**: se trocar, as locadoras precisam colar a chave do Asaas de novo.
+- Pix simples (chave Pix da locadora) não depende do Asaas nem do segredo.
+- Webhook de cada locadora: `https://<worker>/webhook/locadora/<empresa_id>`, criado automaticamente na conta Asaas dela.
