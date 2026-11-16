@@ -23,7 +23,7 @@ const REFERENCIAS = {
 };
 
 const CAMPOS_EMPRESA = ['nome','cnpj','telefone','email','endereco','cidade','cor_primaria','logo'];
-const CAMPOS_EMPRESA_PUBLICOS = 'id, nome, cnpj, telefone, email, endereco, cidade, cor_primaria, logo, plano, teste_ate, assinatura_plano, assinatura_ciclo, assinatura_status, pago_ate, fatura_url, fundador, preco_travado_ate';
+const CAMPOS_EMPRESA_PUBLICOS = 'id, nome, cnpj, telefone, email, endereco, cidade, cor_primaria, logo, plano, teste_ate, assinatura_plano, assinatura_ciclo, assinatura_status, pago_ate, fatura_url, fundador, preco_travado_ate, pix_modo, pix_chave, pix_tipo, pix_nome, pix_cidade, loc_asaas_env';
 const DIAS_TESTE = 30; // oferta de lançamento
 
 /* ---------------- planos e cobrança (Asaas) ---------------- */
@@ -163,10 +163,14 @@ async function empresaPublica(env, empresaId){
 /* ---------------- Asaas ---------------- */
 async function asaas(env, metodo, caminho, corpo){
   if(!env.ASAAS_API_KEY) throw new Erro(503, 'Pagamentos ainda não configurados. Fale com o suporte.');
-  const base = ASAAS_URL[env.ASAAS_ENV === 'production' ? 'production' : 'sandbox'];
+  return asaasCom(env.ASAAS_API_KEY, env.ASAAS_ENV === 'production' ? 'production' : 'sandbox', metodo, caminho, corpo);
+}
+// chamada ao Asaas com uma chave qualquer (a da Foster Tech ou a de uma locadora)
+async function asaasCom(chave, ambiente, metodo, caminho, corpo){
+  const base = ASAAS_URL[ambiente === 'production' ? 'production' : 'sandbox'];
   const res = await fetch(base + caminho, {
     method: metodo,
-    headers: { 'Content-Type': 'application/json', 'User-Agent': 'LocaObra/1.0', access_token: env.ASAAS_API_KEY },
+    headers: { 'Content-Type': 'application/json', 'User-Agent': 'LocaObra/1.0', access_token: chave },
     body: corpo ? JSON.stringify(corpo) : undefined
   });
   const dados = await res.json().catch(() => ({}));
@@ -282,6 +286,110 @@ function traduzErroSQL(e){
   return e;
 }
 
+/* ---------------- Pix da locadora ---------------- */
+const b64 = u8 => btoa(String.fromCharCode(...u8));
+const deb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function chaveCripto(env){
+  if(!env.CRIPTO_CHAVE) throw new Erro(503, 'Recebimento pelo Asaas ainda não habilitado no servidor. Fale com o suporte.');
+  const bruto = deb64(env.CRIPTO_CHAVE.trim());
+  if(bruto.length !== 32) throw new Erro(500, 'CRIPTO_CHAVE inválida');
+  return crypto.subtle.importKey('raw', bruto, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+async function cifrar(env, texto){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await chaveCripto(env), new TextEncoder().encode(texto));
+  return `v1:${b64(iv)}:${b64(new Uint8Array(ct))}`;
+}
+async function decifrar(env, guardado){
+  const [v, iv, ct] = String(guardado || '').split(':');
+  if(v !== 'v1') throw new Erro(400, 'Chave do Asaas não configurada');
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deb64(iv) }, await chaveCripto(env), deb64(ct));
+  return new TextDecoder().decode(pt);
+}
+// Pix com Asaas: incluído no Profissional (e liberado durante o teste e nas contas liberadas pelo suporte)
+function asaasPermitido(e){ return e.plano === 'teste' || e.plano === 'ativo' || e.assinatura_plano === 'profissional'; }
+
+// ---- BR Code (Pix copia e cola) estático, padrão EMV do Banco Central ----
+function semAcento(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function campoEMV(id, valor){ const v = String(valor); return id + String(v.length).padStart(2, '0') + v; }
+function crc16(t){
+  let crc = 0xFFFF;
+  for(let i = 0; i < t.length; i++){
+    crc ^= t.charCodeAt(i) << 8;
+    for(let j = 0; j < 8; j++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function normalizarChavePix(tipo, chave){
+  const c = String(chave || '').trim();
+  if(tipo === 'cpf'){ const d = soDigitos(c); if(d.length !== 11 || !cpfCnpjValido(d)) throw new Erro(400, 'CPF da chave Pix inválido'); return d; }
+  if(tipo === 'cnpj'){ const d = soDigitos(c); if(d.length !== 14 || !cpfCnpjValido(d)) throw new Erro(400, 'CNPJ da chave Pix inválido'); return d; }
+  if(tipo === 'celular'){ let d = soDigitos(c); if(d.length === 10 || d.length === 11) d = '55' + d; if(!/^55\d{10,11}$/.test(d)) throw new Erro(400, 'Celular da chave Pix inválido (use DDD + número)'); return '+' + d; }
+  if(tipo === 'email'){ const e = c.toLowerCase(); if(!emailValido(e) || e.length > 77) throw new Erro(400, 'E-mail da chave Pix inválido'); return e; }
+  if(tipo === 'aleatoria'){ const a = c.toLowerCase(); if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(a)) throw new Erro(400, 'Chave aleatória inválida'); return a; }
+  throw new Erro(400, 'Escolha o tipo da chave Pix');
+}
+function brcodeEstatico({ chave, nome, cidade, valor, txid, descricao }){
+  let conta = campoEMV('00', 'br.gov.bcb.pix') + campoEMV('01', chave);
+  const desc = semAcento(descricao).slice(0, 40);
+  if(desc && (conta.length + 4 + desc.length) <= 99) conta += campoEMV('02', desc);
+  const tx = String(txid || '***').replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***';
+  let p = campoEMV('00', '01') + campoEMV('26', conta) + campoEMV('52', '0000') + campoEMV('53', '986');
+  if(valor > 0) p += campoEMV('54', Number(valor).toFixed(2));
+  p += campoEMV('58', 'BR') + campoEMV('59', semAcento(nome).slice(0, 25) || 'LOCADORA') + campoEMV('60', semAcento(cidade).slice(0, 15) || 'BRASIL');
+  p += campoEMV('62', campoEMV('05', tx)) + '6304';
+  return p + crc16(p);
+}
+
+// registra o pagamento uma única vez (a troca de status protege contra repetição)
+async function marcarCobrancaPaga(env, c, origem){
+  const r = await env.DB.prepare(`UPDATE cobrancas_pix SET status = 'paga', pago_em = ?1 WHERE id = ?2 AND status = 'pendente'`)
+    .bind(new Date().toISOString(), c.id).run();
+  if(!r.meta || !r.meta.changes) return false;
+  await env.DB.prepare('INSERT INTO pagamentos (id, empresa_id, locacao_id, tipo, valor, forma_pagamento, data_pagamento, observacoes) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)')
+    .bind(uuid(), c.empresa_id, c.locacao_id, 'pagamento', c.valor, 'pix', hojeBR(), `Pix ${origem}${c.descricao ? ' — ' + c.descricao : ''}`).run();
+  return true;
+}
+async function chaveAsaasLocadora(env, empresaId){
+  const e = await env.DB.prepare('SELECT loc_asaas_key, loc_asaas_env FROM empresas WHERE id = ?1').bind(empresaId).first();
+  if(!e || !e.loc_asaas_key) throw new Erro(400, 'Conecte a conta Asaas da locadora em Minha empresa');
+  return { chave: await decifrar(env, e.loc_asaas_key), ambiente: e.loc_asaas_env };
+}
+// confere no Asaas da locadora se a cobrança foi paga (reserva, caso o aviso automático falhe)
+async function conferirCobrancaAsaas(env, c){
+  if(c.modo !== 'asaas' || c.status !== 'pendente' || !c.asaas_id) return;
+  if(c.ultimo_check && Date.now() - c.ultimo_check < 8000) return;
+  await env.DB.prepare('UPDATE cobrancas_pix SET ultimo_check = ?1 WHERE id = ?2').bind(Date.now(), c.id).run();
+  try{
+    const { chave, ambiente } = await chaveAsaasLocadora(env, c.empresa_id);
+    const p = await asaasCom(chave, ambiente, 'GET', `/payments/${c.asaas_id}`);
+    if(PAGO.includes(p.status)) await marcarCobrancaPaga(env, c, 'confirmado pelo Asaas');
+    else if(p.deleted || p.status === 'REFUNDED') await env.DB.prepare(`UPDATE cobrancas_pix SET status = 'cancelada' WHERE id = ?1 AND status = 'pendente'`).bind(c.id).run();
+  }catch(err){ console.error('conferir pix', c.id, err && err.message); }
+}
+async function webhookLocadora(request, env, empresaId){
+  const e = await env.DB.prepare('SELECT id, loc_asaas_wh_token FROM empresas WHERE id = ?1').bind(empresaId).first();
+  const recebido = (request.headers.get('asaas-access-token') || '').trim();
+  const esperado = (e && e.loc_asaas_wh_token) || '';
+  const h = async t => hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)));
+  if(!esperado || !iguais(await h(recebido), await h(esperado))) throw new Erro(401, 'Não autorizado');
+  let evt; try { evt = await request.json(); } catch { throw new Erro(400, 'Corpo inválido'); }
+  const chaveEvt = evt.id ? `loc:${empresaId}:${evt.id}` : null;
+  if(chaveEvt && await env.DB.prepare('SELECT 1 FROM eventos_asaas WHERE id = ?1').bind(chaveEvt).first()) return { received: true, duplicate: true };
+  const p = evt.payment || {};
+  if(p.id){
+    const c = await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE asaas_id = ?1 AND empresa_id = ?2').bind(p.id, empresaId).first();
+    if(c){
+      if(evt.event === 'PAYMENT_RECEIVED' || evt.event === 'PAYMENT_CONFIRMED') await marcarCobrancaPaga(env, c, 'recebido pelo Asaas');
+      else if(evt.event === 'PAYMENT_DELETED' || evt.event === 'PAYMENT_REFUNDED')
+        await env.DB.prepare(`UPDATE cobrancas_pix SET status = 'cancelada' WHERE id = ?1 AND status = 'pendente'`).bind(c.id).run();
+    }
+  }
+  if(chaveEvt) await env.DB.prepare('INSERT OR IGNORE INTO eventos_asaas (id) VALUES (?1)').bind(chaveEvt).run();
+  return { received: true };
+}
+function cobrancaPublica(c){ const { ultimo_check, empresa_id, ...r } = c; return r; }
+
 /* ---------------- rotas ---------------- */
 async function rotear(request, env, url){
   const path = url.pathname.replace(/\/+$/, '');
@@ -298,6 +406,9 @@ async function rotear(request, env, url){
     return [200, await webhookAsaas(request, env)];
   }
 
+  const mWhLoc = path.match(/^\/webhook\/locadora\/([a-zA-Z0-9-]+)$/);
+  if(mWhLoc && method === 'POST') return [200, await webhookLocadora(request, env, mWhLoc[1])];
+
   // ----- CADASTRO DE NOVA LOCADORA -----
   if(path === '/api/cadastro' && method === 'POST'){
     const b = await corpo();
@@ -310,7 +421,7 @@ async function rotear(request, env, url){
     if(existe) throw new Erro(409, 'Já existe uma conta com esse e-mail');
 
     const empresaId = uuid(), usuarioId = uuid();
-    const testeAte = new Date(Date.now() + DIAS_TESTE * 86400000).toISOString().slice(0,10);
+    const testeAte = somaDias(hojeBR(), DIAS_TESTE);
     const hash = await gerarHashSenha(b.password);
     await env.DB.batch([
       env.DB.prepare('INSERT INTO empresas (id, nome, telefone, email, cidade, teste_ate) VALUES (?1,?2,?3,?4,?5,?6)')
@@ -487,6 +598,137 @@ async function rotear(request, env, url){
     return [200, { ok: true }];
   }
 
+  // ----- PIX DA LOCADORA: CONFIGURAÇÃO -----
+  if(path === '/api/pix/config' && method === 'POST'){
+    exigirAdmin(s);
+    const b = await corpo();
+    const e = await env.DB.prepare('SELECT * FROM empresas WHERE id = ?1').bind(s.empresa_id).first();
+    const removerWebhook = async () => {
+      if(!e.loc_asaas_key || !e.loc_asaas_wh_id) return;
+      try{ const k = await decifrar(env, e.loc_asaas_key); await asaasCom(k, e.loc_asaas_env, 'DELETE', `/webhooks/${e.loc_asaas_wh_id}`); }
+      catch(err){ console.error('remover webhook locadora', err && err.message); }
+    };
+    if(!b.modo){
+      await removerWebhook();
+      await env.DB.prepare('UPDATE empresas SET pix_modo = NULL, loc_asaas_key = NULL, loc_asaas_env = NULL, loc_asaas_wh_token = NULL, loc_asaas_wh_id = NULL WHERE id = ?1').bind(s.empresa_id).run();
+      return [200, await empresaPublica(env, s.empresa_id)];
+    }
+    if(b.modo === 'simples'){
+      const tipo = String(b.tipo || '');
+      const chave = normalizarChavePix(tipo, b.chave);
+      const nome = semAcento(b.nome || e.nome).slice(0, 25), cidade = semAcento(b.cidade || e.cidade).slice(0, 15);
+      if(nome.length < 2) throw new Erro(400, 'Informe o nome do recebedor');
+      if(cidade.length < 2) throw new Erro(400, 'Informe a cidade do recebedor');
+      await removerWebhook();
+      await env.DB.prepare(`UPDATE empresas SET pix_modo = 'simples', pix_tipo = ?1, pix_chave = ?2, pix_nome = ?3, pix_cidade = ?4,
+          loc_asaas_key = NULL, loc_asaas_env = NULL, loc_asaas_wh_token = NULL, loc_asaas_wh_id = NULL WHERE id = ?5`)
+        .bind(tipo, chave, nome, cidade, s.empresa_id).run();
+      return [200, await empresaPublica(env, s.empresa_id)];
+    }
+    if(b.modo === 'asaas'){
+      if(!asaasPermitido(e)) throw new Erro(403, 'O Pix com baixa automática pelo Asaas faz parte do plano Profissional.');
+      const chave = String(b.api_key || '').trim();
+      if(!/^\$?aact_/.test(chave) || chave.length < 30) throw new Erro(400, 'Chave de API do Asaas inválida (ela começa com $aact_)');
+      // descobre o ambiente da chave e confere se ela funciona
+      const ordem = chave.includes('_hmlg_') ? ['sandbox', 'production'] : ['production', 'sandbox'];
+      let ambiente = null;
+      for(const amb of ordem){ try{ await asaasCom(chave, amb, 'GET', '/finance/balance'); ambiente = amb; break; }catch(err){} }
+      if(!ambiente) throw new Erro(400, 'O Asaas não aceitou essa chave. Confira se copiou a chave inteira, com o $ do começo.');
+      await removerWebhook();
+      const token = hex(crypto.getRandomValues(new Uint8Array(24)));
+      let whId = null;
+      try{
+        const wh = await asaasCom(chave, ambiente, 'POST', '/webhooks', {
+          name: 'LocaObra', url: `${url.origin}/webhook/locadora/${s.empresa_id}`, email: e.email || s.email,
+          enabled: true, interrupted: false, apiVersion: 3, authToken: token, sendType: 'SEQUENTIAL',
+          events: ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED', 'PAYMENT_DELETED', 'PAYMENT_REFUNDED']
+        });
+        whId = wh.id || null;
+      }catch(err){ console.error('criar webhook locadora', err && err.message); }
+      await env.DB.prepare(`UPDATE empresas SET pix_modo = 'asaas', loc_asaas_key = ?1, loc_asaas_env = ?2, loc_asaas_wh_token = ?3, loc_asaas_wh_id = ?4 WHERE id = ?5`)
+        .bind(await cifrar(env, chave), ambiente, token, whId, s.empresa_id).run();
+      return [200, { ...(await empresaPublica(env, s.empresa_id)), webhook_criado: !!whId }];
+    }
+    throw new Erro(400, 'Modo de Pix inválido');
+  }
+
+  // ----- PIX DA LOCADORA: COBRANÇAS DE UMA LOCAÇÃO -----
+  const mPix = path.match(/^\/api\/locacoes\/([a-zA-Z0-9-]+)\/pix$/);
+  if(mPix){
+    const loc = await env.DB.prepare('SELECT * FROM locacoes WHERE id = ?1 AND empresa_id = ?2').bind(mPix[1], s.empresa_id).first();
+    if(!loc) throw new Erro(404, 'Locação não encontrada');
+    if(method === 'GET'){
+      let { results } = await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE locacao_id = ?1 AND empresa_id = ?2 ORDER BY criado_em DESC').bind(loc.id, s.empresa_id).all();
+      const pend = results.filter(c => c.modo === 'asaas' && c.status === 'pendente');
+      if(pend.length){
+        for(const c of pend.slice(0, 3)) await conferirCobrancaAsaas(env, c);
+        ({ results } = await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE locacao_id = ?1 AND empresa_id = ?2 ORDER BY criado_em DESC').bind(loc.id, s.empresa_id).all());
+      }
+      return [200, results.map(cobrancaPublica)];
+    }
+    if(method === 'POST'){
+      exigirAtiva(s);
+      const b = await corpo();
+      const valor = Math.round(Number(b.valor) * 100) / 100;
+      if(!(valor >= 1) || valor > 1000000) throw new Erro(400, 'Informe um valor a partir de R$ 1,00');
+      const descricao = String(b.descricao || '').trim().slice(0, 80) || null;
+      const e = await env.DB.prepare('SELECT * FROM empresas WHERE id = ?1').bind(s.empresa_id).first();
+      const numero = `${String(loc.numero || 0).padStart(4, '0')}/${String(loc.data_retirada || '').slice(2, 4)}`;
+      const id = uuid();
+      if(e.pix_modo === 'simples'){
+        const txid = `LO${String(loc.numero || 0).padStart(4, '0')}${id.replace(/-/g, '').slice(0, 10)}`;
+        const payload = brcodeEstatico({ chave: e.pix_chave, nome: e.pix_nome, cidade: e.pix_cidade, valor, txid, descricao: `Locacao ${numero}` });
+        await env.DB.prepare('INSERT INTO cobrancas_pix (id, empresa_id, locacao_id, modo, valor, descricao, payload) VALUES (?1,?2,?3,?4,?5,?6,?7)')
+          .bind(id, s.empresa_id, loc.id, 'simples', valor, descricao, payload).run();
+      } else if(e.pix_modo === 'asaas'){
+        if(!asaasPermitido(e)) throw new Erro(403, 'O Pix pelo Asaas faz parte do plano Profissional. No seu plano, use o Pix simples (chave Pix) em Minha empresa.');
+        const cli = await env.DB.prepare('SELECT * FROM clientes WHERE id = ?1 AND empresa_id = ?2').bind(loc.cliente_id, s.empresa_id).first();
+        const doc = soDigitos(cli && cli.documento);
+        if(!cpfCnpjValido(doc)) throw new Erro(400, 'Para cobrar pelo Asaas, o cliente precisa ter CPF ou CNPJ válido no cadastro.');
+        const { chave, ambiente } = await chaveAsaasLocadora(env, s.empresa_id);
+        const achado = await asaasCom(chave, ambiente, 'GET', `/customers?cpfCnpj=${doc}&limit=1`);
+        let clienteId = achado?.data?.[0]?.id;
+        if(!clienteId){
+          const novo = await asaasCom(chave, ambiente, 'POST', '/customers', { name: cli.nome, cpfCnpj: doc, email: cli.email || undefined,
+            mobilePhone: soDigitos(cli.telefone) || undefined, notificationDisabled: true });
+          clienteId = novo.id;
+        }
+        const pg = await asaasCom(chave, ambiente, 'POST', '/payments', { customer: clienteId, billingType: 'PIX', value: valor,
+          dueDate: somaDias(hojeBR(), 2), description: `Locação ${numero}${descricao ? ' — ' + descricao : ''}`.slice(0, 500),
+          externalReference: `locaobra-loc:${loc.id}` });
+        const qr = await asaasCom(chave, ambiente, 'GET', `/payments/${pg.id}/pixQrCode`);
+        await env.DB.prepare('INSERT INTO cobrancas_pix (id, empresa_id, locacao_id, modo, asaas_id, valor, descricao, payload, fatura_url) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
+          .bind(id, s.empresa_id, loc.id, 'asaas', pg.id, valor, descricao, qr.payload, pg.invoiceUrl || null).run();
+      } else {
+        throw new Erro(400, 'Configure o recebimento por Pix em Minha empresa');
+      }
+      return [201, cobrancaPublica(await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE id = ?1').bind(id).first())];
+    }
+  }
+  const mPixAcao = path.match(/^\/api\/pix\/([a-zA-Z0-9-]+)\/(pago|cancelar)$/);
+  if(mPixAcao && method === 'POST'){
+    exigirAtiva(s);
+    const c = await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE id = ?1 AND empresa_id = ?2').bind(mPixAcao[1], s.empresa_id).first();
+    if(!c) throw new Erro(404, 'Cobrança não encontrada');
+    if(c.status !== 'pendente') throw new Erro(409, c.status === 'paga' ? 'Esta cobrança já está paga' : 'Esta cobrança foi cancelada');
+    if(mPixAcao[2] === 'pago'){
+      if(c.modo === 'asaas'){
+        await conferirCobrancaAsaas(env, { ...c, ultimo_check: null });
+        const atual = await env.DB.prepare('SELECT status FROM cobrancas_pix WHERE id = ?1').bind(c.id).first();
+        if(atual.status !== 'paga') throw new Erro(409, 'O Asaas ainda não confirmou este pagamento. Aguarde alguns instantes.');
+      } else {
+        await marcarCobrancaPaga(env, c, 'confirmado manualmente');
+      }
+    } else {
+      if(c.modo === 'asaas' && c.asaas_id){
+        try{ const { chave, ambiente } = await chaveAsaasLocadora(env, s.empresa_id); await asaasCom(chave, ambiente, 'DELETE', `/payments/${c.asaas_id}`); }
+        catch(err){ console.error('cancelar pix', err && err.message); }
+      }
+      await env.DB.prepare(`UPDATE cobrancas_pix SET status = 'cancelada' WHERE id = ?1 AND status = 'pendente'`).bind(c.id).run();
+    }
+    return [200, cobrancaPublica(await env.DB.prepare('SELECT * FROM cobrancas_pix WHERE id = ?1').bind(c.id).first())];
+  }
+
   // ----- DEVOLUÇÃO (tudo de uma vez no servidor) -----
   const mDev = path.match(/^\/api\/locacoes\/([a-zA-Z0-9-]+)\/devolver$/);
   if(mDev && method === 'POST'){
@@ -495,7 +737,7 @@ async function rotear(request, env, url){
     const loc = await env.DB.prepare('SELECT * FROM locacoes WHERE id = ?1 AND empresa_id = ?2').bind(mDev[1], s.empresa_id).first();
     if(!loc) throw new Erro(404, 'Locação não encontrada');
     if(loc.status === 'devolvida') throw new Erro(409, 'Esta locação já foi devolvida');
-    const hoje = /^\d{4}-\d{2}-\d{2}$/.test(b.data_devolucao || '') ? b.data_devolucao : new Date().toISOString().slice(0,10);
+    const hoje = /^\d{4}-\d{2}-\d{2}$/.test(b.data_devolucao || '') ? b.data_devolucao : hojeBR();
     const diasAtraso = Math.max(0, Math.round((Date.parse(hoje) - Date.parse(loc.data_devolucao_prevista)) / 86400000));
     const { results: itens } = await env.DB.prepare(
       `SELECT i.ferramenta_id, i.quantidade, f.valor_diaria FROM itens_locacao i

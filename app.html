@@ -81,9 +81,9 @@ nav .icon{width:18px; text-align:center; font-size:15px;}
 
 /* ---- cards / stats ---- */
 .grid{display:grid; gap:16px;}
-.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr));}
 .grid-2{grid-template-columns:1fr 1fr;}
-@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-2{grid-template-columns:1fr;} .sidebar{width:70px;} .brand .display{display:none;} nav button span.label{display:none;}}
+@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,minmax(0,1fr));} .grid-2{grid-template-columns:1fr;} .sidebar{width:70px;} .brand .display{display:none;} nav button span.label{display:none;}}
 
 .stat{
   background:var(--concrete-2); border:1px solid var(--line); border-radius:var(--radius);
@@ -128,6 +128,7 @@ button.btn:active{transform:scale(0.98);}
 .btn-outline{background:none; border:1.5px solid var(--charcoal); color:var(--charcoal);}
 .btn-outline:hover{background:var(--charcoal); color:#fff;}
 .btn-sm{padding:6px 12px; font-size:12.5px;}
+a.btn{text-decoration:none; display:inline-flex; align-items:center; justify-content:center;}
 .btn-danger{background:none; color:var(--red); border:1.5px solid var(--red);}
 button.btn.btn-outline{border:1.5px solid var(--charcoal);}
 button.btn.btn-danger{border:1.5px solid var(--red);}
@@ -151,6 +152,25 @@ tr:hover td{background:#F2EFE8;}
 .badge-bad{background:#FBE4E4; color:var(--red);}
 .badge-neutral{background:#E8E6E0; color:var(--ink-soft);}
 
+.pix-fundo{position:fixed; inset:0; background:rgba(20,20,22,.55); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow-y:auto;}
+.pix-caixa{background:#fff; border-radius:10px; width:100%; max-width:460px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.pix-caixa h2{font-size:18px; margin-bottom:2px;}
+.pix-topo{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px;}
+.pix-fechar{background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color:var(--ink-soft);}
+.pix-qr{display:block; margin:6px auto 10px; width:220px; height:220px; image-rendering:pixelated;}
+.pix-copia{width:100%; font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px; border:1px solid var(--line); border-radius:6px; resize:none; height:64px; background:#F7F5F0;}
+.pix-valor{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:600; text-align:center;}
+.pix-hist{margin-top:14px; border-top:1px solid var(--line); padding-top:10px; font-size:13px;}
+.pix-hist div{display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px dashed var(--line);}
+.pix-abas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+.pix-abas label{border:1.5px solid var(--line); border-radius:20px; padding:6px 12px; font-size:13px; cursor:pointer; text-transform:none; letter-spacing:0; font-weight:600; color:var(--ink);}
+.pix-abas input{display:none;}
+.pix-abas input:checked + span{color:var(--amber-dark);}
+.pix-abas label:has(input:checked){border-color:var(--amber); background:#FFF6F6;}
+.pix-passos{font-size:13px; color:var(--ink-soft); margin:0 0 12px 18px;}
+.pix-passos li{margin-bottom:4px;}
+.ilu{flex-shrink:0; display:inline-block; vertical-align:middle;}
+.fer-nome{display:inline-flex; align-items:center; gap:8px;}
 .item-row{display:flex; gap:10px; align-items:end; margin-bottom:10px; padding:10px; background:#F7F5F0; border-radius:var(--radius); border:1px dashed var(--line);}
 .item-row select, .item-row input{flex:1;}
 .item-row .qty{max-width:70px;}
@@ -750,7 +770,7 @@ async function renderPlano(el){
         <li>Até ${p.usuarios} usuários</li>
         <li>Locações e ferramentas ilimitadas</li>
         <li>Contrato e termos em PDF com sua marca</li>
-        ${id === 'profissional' ? '<li>Novos recursos primeiro (cobrança Pix ao cliente)</li>' : '<li>Lembrete de devolução por WhatsApp</li>'}
+        ${id === 'profissional' ? '<li>Pix com baixa automática (sua conta Asaas)</li>' : '<li>Pix com QR Code na sua chave</li>'}
       </ul>
     </div>`;
   };
@@ -987,6 +1007,70 @@ async function excluirCliente(id){
 /* ======================================================
    FERRAMENTAS COMUNS — cadastro rápido
    ====================================================== */
+/* LocaObra — ilustrações próprias de ferramentas e equipamentos (Foster Tech Soluções)
+   Estilo: traço grafite, metal cinza, detalhe na cor da locadora (var(--amber)). viewBox 64x64. */
+const ILU_C = { t: '#2A2D31', m: '#B9BDC4', c: '#E4E1DA', a: 'var(--amber, #E00000)', w: '#FFFFFF', p: '#C79A5B' };
+const ILU = {
+  andaime: `<g fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"><path d="M14 8v48M50 8v48M14 14h36M14 34h36M14 54h36"/><path d="M14 14l36 20M50 34L14 54" stroke="${ILU_C.m}"/></g><rect x="10" y="30" width="44" height="6" rx="1.5" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2"/>`,
+  sapata: `<rect x="29" y="6" width="6" height="34" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M29 14h6M29 20h6M29 26h6" stroke="${ILU_C.t}" stroke-width="1.5"/><path d="M22 40h20l-3 6H25z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><rect x="12" y="46" width="40" height="8" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  diagonal: `<path d="M10 52L54 12" stroke="${ILU_C.t}" stroke-width="9" stroke-linecap="round"/><path d="M10 52L54 12" stroke="${ILU_C.m}" stroke-width="4" stroke-linecap="round"/><circle cx="10" cy="52" r="6" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="54" cy="12" r="6" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  prancha: `<path d="M6 30l40-14 12 6-40 16z" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 38v8l40-16v-8" fill="${ILU_C.c}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M6 30v8l12 8" fill="none" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 29l3 1M24 26l3 1M32 23l3 1M40 20l3 1" stroke="${ILU_C.t}" stroke-width="2" stroke-linecap="round"/><path d="M18 46l40-16" stroke="${ILU_C.a}" stroke-width="3"/>`,
+  escada: `<g stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"><path d="M20 6L14 58M44 6l6 52"/><path d="M19 14h26M18 24h28M17 34h30M16 44h32M15 54h34" stroke="${ILU_C.m}" stroke-width="4"/></g><path d="M20 6L14 58M44 6l6 52" stroke="${ILU_C.a}" stroke-width="3" stroke-linecap="round"/>`,
+  guardacorpo: `<g stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"><path d="M10 12v44M54 12v44"/><path d="M10 18h44M10 34h44" stroke="${ILU_C.a}" stroke-width="5"/></g><rect x="8" y="48" width="48" height="8" rx="1.5" fill="${ILU_C.p}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  sarrafo: `<path d="M8 40L48 12l8 6-40 28z" fill="${ILU_C.p}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 46v6l40-28v-6" fill="#A87C43" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M8 40v6l8 6" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M20 34c6-3 12-8 18-12" stroke="#A87C43" stroke-width="1.5" fill="none"/>`,
+  cinto: `<path d="M22 8l-4 22h28l-4-22" fill="none" stroke="${ILU_C.a}" stroke-width="5" stroke-linejoin="round"/><path d="M18 30h28l2 10H16z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 40l-2 14M44 40l2 14" stroke="${ILU_C.a}" stroke-width="5" stroke-linecap="round"/><rect x="28" y="30" width="8" height="10" rx="1.5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M32 8c6 0 10-4 16-2" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="8" r="4" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  escora: `<rect x="22" y="4" width="20" height="5" rx="1.5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="29" y="9" width="6" height="22" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="27" y="29" width="10" height="27" rx="1" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M22 31h20" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><path d="M29 14v0M29 20" stroke="${ILU_C.t}"/><circle cx="32" cy="16" r="1.5" fill="${ILU_C.t}"/><circle cx="32" cy="23" r="1.5" fill="${ILU_C.t}"/><rect x="20" y="55" width="24" height="5" rx="1.5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  forma: `<rect x="8" y="10" width="48" height="44" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="12" y="14" width="40" height="36" fill="${ILU_C.c}" stroke="${ILU_C.t}" stroke-width="1.5"/><path d="M32 14v36M12 32h40" stroke="${ILU_C.a}" stroke-width="4"/><circle cx="16" cy="18" r="1.5" fill="${ILU_C.t}"/><circle cx="48" cy="18" r="1.5" fill="${ILU_C.t}"/><circle cx="16" cy="46" r="1.5" fill="${ILU_C.t}"/><circle cx="48" cy="46" r="1.5" fill="${ILU_C.t}"/>`,
+  furadeira: `<path d="M12 16h30a6 6 0 0 1 6 6v4a6 6 0 0 1-6 6H12z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 32l-4 22h12l2-22" fill="${ILU_C.t}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><rect x="48" y="20" width="6" height="8" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M54 24h8" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><path d="M28 36h4" stroke="${ILU_C.m}" stroke-width="3"/><path d="M16 20v8M20 20v8" stroke="${ILU_C.t}" stroke-width="1.5"/>`,
+  esmerilhadeira: `<rect x="8" y="24" width="34" height="14" rx="7" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M14 27v8M18 27v8" stroke="${ILU_C.t}" stroke-width="1.5"/><rect x="40" y="22" width="8" height="18" rx="2" fill="${ILU_C.t}"/><circle cx="50" cy="44" r="12" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="50" cy="44" r="3" fill="${ILU_C.t}"/><path d="M38 44a12 12 0 0 1 12-12" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><path d="M26 24v-6h8" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/>`,
+  martelete: `<rect x="20" y="6" width="24" height="8" rx="4" fill="${ILU_C.t}"/><rect x="18" y="14" width="28" height="22" rx="4" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M24 20h16M24 25h16M24 30h16" stroke="${ILU_C.t}" stroke-width="1.5"/><rect x="27" y="36" width="10" height="8" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M32 44v12l-3 4h6l-3-4" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 10h10M44 10h10" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/>`,
+  betoneira: `<path d="M14 18l26-10 10 22-26 10z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 18c-6 4-6 16 10 22" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M22 16l18 18M30 12l14 18" stroke="${ILU_C.t}" stroke-width="1.5" opacity=".5"/><path d="M40 8l6-4" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linecap="round"/><path d="M28 40l-6 14M40 34l8 20M18 54h36" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><circle cx="18" cy="54" r="5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="50" cy="54" r="5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="40" y="36" width="12" height="10" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  vibrador: `<rect x="6" y="34" width="20" height="16" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M10 34v-6h12v6" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M26 42c10 0 8-24 20-24" fill="none" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><rect x="44" y="10" width="8" height="40" rx="4" transform="rotate(20 48 30)" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M52 50l4 4M56 46l4 4" stroke="${ILU_C.t}" stroke-width="2" stroke-linecap="round"/>`,
+  compactador: `<path d="M18 8h28" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><path d="M22 8v10M42 8v10" stroke="${ILU_C.t}" stroke-width="3"/><rect x="18" y="18" width="28" height="16" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="26" y="34" width="12" height="12" fill="${ILU_C.t}"/><path d="M28 38h8" stroke="${ILU_C.m}" stroke-width="2"/><rect x="18" y="46" width="28" height="10" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M12 60h40" stroke="${ILU_C.t}" stroke-width="2" stroke-dasharray="3 3"/>`,
+  placa: `<path d="M14 6l14 22" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><path d="M10 6h10" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><rect x="22" y="24" width="30" height="16" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="28" y="28" width="10" height="8" rx="1.5" fill="${ILU_C.t}"/><rect x="10" y="42" width="48" height="10" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M8 58h52" stroke="${ILU_C.t}" stroke-width="2" stroke-dasharray="3 3"/>`,
+  gerador: `<rect x="8" y="16" width="48" height="34" rx="3" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><rect x="14" y="22" width="36" height="22" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="18" y="12" width="16" height="10" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="40" cy="33" r="5" fill="${ILU_C.w}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M38 33l2-3 1 3 2-3" fill="none" stroke="${ILU_C.t}" stroke-width="1.5"/><path d="M20 30h10M20 36h10" stroke="${ILU_C.t}" stroke-width="2"/><circle cx="14" cy="54" r="4" fill="${ILU_C.t}"/><circle cx="50" cy="54" r="4" fill="${ILU_C.t}"/>`,
+  carrinho: `<path d="M8 26h40l-8 18H18z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M48 26l10-6M18 44l-6 12M40 44l2 8" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><circle cx="28" cy="52" r="7" fill="${ILU_C.t}"/><circle cx="28" cy="52" r="3" fill="${ILU_C.m}"/><path d="M14 30h30" stroke="${ILU_C.w}" stroke-width="2" opacity=".5"/>`,
+  serra: `<circle cx="38" cy="38" r="16" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="38" cy="38" r="3" fill="${ILU_C.t}"/><path d="M38 22v-3M54 38h3M38 54v3M22 38h-3M27 27l-2-2M49 27l2-2M49 49l2 2M27 49l-2 2" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linecap="round"/><path d="M8 14h22a8 8 0 0 1 8 8v4H8z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M8 14v-4h12" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/>`,
+  compressor: `<rect x="8" y="20" width="48" height="24" rx="12" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="20" y="8" width="18" height="12" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="46" cy="14" r="5" fill="${ILU_C.w}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M46 14l2-2" stroke="${ILU_C.t}" stroke-width="1.5"/><circle cx="16" cy="50" r="5" fill="${ILU_C.t}"/><circle cx="48" cy="50" r="5" fill="${ILU_C.t}"/><path d="M20 30h24" stroke="${ILU_C.t}" stroke-width="1.5" opacity=".5"/>`,
+  lavadora: `<rect x="10" y="18" width="26" height="30" rx="4" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M14 18V8h18v10" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><circle cx="16" cy="52" r="5" fill="${ILU_C.t}"/><path d="M36 30c8 0 8 10 14 10" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><path d="M46 36l12-10" stroke="${ILU_C.m}" stroke-width="4" stroke-linecap="round"/><path d="M58 26l4-6M58 26l5-2M58 26l3 3" stroke="#5BA3D9" stroke-width="2" stroke-linecap="round"/>`,
+  bomba: `<rect x="20" y="8" width="24" height="40" rx="6" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M24 16h16M24 22h16" stroke="${ILU_C.t}" stroke-width="1.5"/><rect x="22" y="48" width="20" height="8" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M44 14c10 0 12 6 12 14" fill="none" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><path d="M6 44c4-3 8 3 12 0M46 44c4-3 8 3 12 0M6 52c4-3 8 3 12 0" fill="none" stroke="#5BA3D9" stroke-width="2.5" stroke-linecap="round"/>`,
+  solda: `<rect x="8" y="22" width="30" height="26" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="18" cy="35" r="5" fill="${ILU_C.w}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M28 30h6M28 36h6M28 42h6" stroke="${ILU_C.t}" stroke-width="2"/><path d="M16 22v-6h14v6" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><path d="M38 40c8 0 8-16 16-16" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><path d="M52 24l6-8" stroke="${ILU_C.m}" stroke-width="5" stroke-linecap="round"/><path d="M58 12l2-4M60 16l4-1M56 10l-1-4" stroke="#F2B200" stroke-width="2" stroke-linecap="round"/>`,
+  laser: `<rect x="22" y="22" width="20" height="20" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="32" cy="32" r="4" fill="${ILU_C.w}" stroke="${ILU_C.t}" stroke-width="2"/><path d="M32 42v8M24 58l8-8 8 8" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 32h18M42 32h18" stroke="#2FBF5B" stroke-width="2.5" stroke-dasharray="4 3"/><path d="M32 22V6" stroke="#2FBF5B" stroke-width="2.5" stroke-dasharray="4 3"/>`,
+  refletor: `<rect x="12" y="10" width="40" height="28" rx="3" fill="${ILU_C.t}"/><rect x="16" y="14" width="32" height="20" rx="2" fill="#FFF3B0" stroke="${ILU_C.a}" stroke-width="2.5"/><path d="M20 18h24M20 24h24M20 30h24" stroke="#F2D24B" stroke-width="2"/><path d="M14 38l-4 18M50 38l4 18M10 56h44" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/>`,
+  extensao: `<circle cx="28" cy="34" r="16" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="28" cy="34" r="8" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M14 52h28" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><path d="M44 34c8 0 6-18 14-18" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><rect x="52" y="8" width="10" height="10" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2"/>`,
+  cacamba: `<path d="M6 22h52l-6 26H12z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 22l6 26M26 22l2 26M38 22l-2 26M50 22l-6 26" stroke="${ILU_C.t}" stroke-width="1.5" opacity=".45"/><path d="M14 22l8-8 6 4 8-6 6 6 8-2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2" stroke-linejoin="round"/><rect x="10" y="48" width="44" height="6" fill="${ILU_C.t}"/>`,
+  plataforma: `<rect x="10" y="8" width="44" height="8" rx="1.5" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M10 8V2M54 8V2M10 3h44" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M16 16l32 10L16 36l32 10" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linejoin="round"/><path d="M48 16L16 26l32 10-32 10" fill="none" stroke="${ILU_C.m}" stroke-width="3" stroke-linejoin="round"/><rect x="8" y="46" width="48" height="8" rx="2" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="16" cy="58" r="4" fill="${ILU_C.t}"/><circle cx="48" cy="58" r="4" fill="${ILU_C.t}"/>`,
+  talha: `<path d="M8 6h48" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><path d="M32 6v6" stroke="${ILU_C.t}" stroke-width="3"/><rect x="22" y="12" width="20" height="16" rx="4" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M32 28v16" stroke="${ILU_C.t}" stroke-width="3" stroke-dasharray="3 2"/><path d="M28 44a4 4 0 1 0 8 0v-2" fill="none" stroke="${ILU_C.t}" stroke-width="3" stroke-linecap="round"/><rect x="20" y="48" width="24" height="12" rx="2" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  parafusadeira: `<path d="M12 16h28a6 6 0 0 1 6 6v2a6 6 0 0 1-6 6H12z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 30l-4 16h12l2-16" fill="${ILU_C.t}"/><rect x="16" y="46" width="20" height="10" rx="2" fill="${ILU_C.t}"/><path d="M20 50h12" stroke="#2FBF5B" stroke-width="2"/><path d="M46 23h14" stroke="${ILU_C.m}" stroke-width="4" stroke-linecap="round"/>`,
+  corte_piso: `<rect x="10" y="26" width="34" height="16" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M44 30l12-18" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="46" r="10" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="20" cy="46" r="2.5" fill="${ILU_C.t}"/><circle cx="42" cy="48" r="5" fill="${ILU_C.t}"/><path d="M4 58h56" stroke="${ILU_C.t}" stroke-width="2"/>`,
+  alisadora: `<ellipse cx="32" cy="48" rx="26" ry="8" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="24" y="34" width="16" height="12" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M36 34L52 8M48 6h10" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/>`,
+  rolo: `<rect x="8" y="38" width="22" height="18" rx="9" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="26" y="24" width="28" height="20" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="34" y="12" width="14" height="12" rx="2" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="46" cy="50" r="7" fill="${ILU_C.t}"/><path d="M18 38V30h12" fill="none" stroke="${ILU_C.t}" stroke-width="2.5"/>`,
+  aspirador: `<path d="M14 24h26l-2 28H16z" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5" stroke-linejoin="round"/><rect x="12" y="16" width="30" height="8" rx="3" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2.5"/><circle cx="18" cy="56" r="3.5" fill="${ILU_C.t}"/><circle cx="36" cy="56" r="3.5" fill="${ILU_C.t}"/><path d="M42 20c12 0 14 10 14 24v12" fill="none" stroke="${ILU_C.t}" stroke-width="3.5" stroke-linecap="round"/><path d="M50 58h12" stroke="${ILU_C.t}" stroke-width="4" stroke-linecap="round"/>`,
+  generico: `<rect x="8" y="22" width="48" height="32" rx="3" fill="${ILU_C.a}" stroke="${ILU_C.t}" stroke-width="2.5"/><path d="M24 22v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6" fill="none" stroke="${ILU_C.t}" stroke-width="3"/><path d="M8 34h48" stroke="${ILU_C.t}" stroke-width="2.5"/><rect x="28" y="30" width="8" height="8" rx="1.5" fill="${ILU_C.m}" stroke="${ILU_C.t}" stroke-width="2"/>`
+};
+// nome da ferramenta -> ilustração (pela palavra-chave)
+const ILU_REGRAS = [
+  [/plataforma|tesoura|pta\b/, 'plataforma'], [/talha|guincho/, 'talha'], [/sapata|base regul/, 'sapata'],
+  [/diagonal|contravent/, 'diagonal'], [/rodap|prancha|piso de andaime/, 'prancha'], [/escada/, 'escada'],
+  [/guarda.?corpo/, 'guardacorpo'], [/sarrafo|madeira/, 'sarrafo'], [/cinto|talabarte|trava.?queda/, 'cinto'],
+  [/escora/, 'escora'], [/forma|fôrma/, 'forma'], [/andaime|rodizio|rodízio/, 'andaime'],
+  [/parafusadeira/, 'parafusadeira'], [/furadeira|perfurador/, 'furadeira'], [/esmerilh|lixadeira angular|policorte/, 'esmerilhadeira'],
+  [/martelete|rompedor/, 'martelete'], [/betoneira/, 'betoneira'], [/vibrador/, 'vibrador'], [/regua vibrat|régua vibrat|placa vibrat/, 'placa'],
+  [/alisadora|bambol/, 'alisadora'], [/rolo compact/, 'rolo'], [/compactador|soquete|sapo/, 'compactador'],
+  [/gerador/, 'gerador'], [/carrinho|girica/, 'carrinho'], [/cortadora|corte de piso/, 'corte_piso'], [/serra/, 'serra'],
+  [/lixadeira|girafa/, 'esmerilhadeira'], [/compressor/, 'compressor'], [/lavadora|alta press|wap/, 'lavadora'],
+  [/aspirador/, 'aspirador'], [/bomba/, 'bomba'], [/solda/, 'solda'], [/laser|nível|nivel/, 'laser'],
+  [/refletor|ilumina/, 'refletor'], [/extens|cabo/, 'extensao'], [/caçamba|cacamba|container|entulho/, 'cacamba']
+];
+function iluChave(nome){
+  const n = String(nome || '').toLowerCase();
+  for(const [re, k] of ILU_REGRAS) if(re.test(n)) return k;
+  return 'generico';
+}
+function ilustracao(nome, tam = 40, rotulo = ''){
+  return `<svg class="ilu" viewBox="0 0 64 64" width="${tam}" height="${tam}" role="img" aria-label="${String(rotulo || 'Ilustração').replace(/["<>&]/g, '')}" focusable="false">${ILU[iluChave(nome)]}</svg>`;
+}
+
 const FERRAMENTAS_COMUNS = [
   {nome:'Andaime tubular — módulo 1,00 x 1,50m', categoria:'Andaime', valor_diaria:12},
   {nome:'Andaime tubular — módulo 1,00 x 2,00m', categoria:'Andaime', valor_diaria:15},
@@ -1092,9 +1176,10 @@ function renderFerramentas(el){
       <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Marque as ferramentas que você já tem e cadastre todas de uma vez, com valores sugeridos (edite depois se quiser).</div>
       <div id="lista-comuns" class="grid grid-4" style="gap:8px; margin-bottom:14px;">
         ${FERRAMENTAS_COMUNS.map((f,idx)=>`
-          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; background:#F7F5F0; border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; cursor:pointer;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; min-width:0; overflow-wrap:break-word; hyphens:auto; font-weight:400; text-transform:none; letter-spacing:0; background:#F7F5F0; border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; cursor:pointer;">
             <input type="checkbox" class="chk-comum" data-idx="${idx}" style="width:auto;">
-            ${f.nome}
+            ${ilustracao(f.nome, 34, f.nome)}
+            <span>${f.nome}</span>
           </label>
         `).join('')}
       </div>
@@ -1186,7 +1271,7 @@ function renderFerramentas(el){
 function listaFerramentasHTML(list){
   if(!list.length) return `<div class="empty"><div class="display">Nenhuma ferramenta encontrada</div></div>`;
   return `<table><thead><tr><th>Código</th><th>Nome</th><th>Diária</th><th>Disponível</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-    ${list.map(f=>`<tr><td class="mono">${f.codigo}</td><td>${f.nome}</td><td class="mono">${fmtMoney(f.valor_diaria)}</td>
+    ${list.map(f=>`<tr><td class="mono">${f.codigo}</td><td><span class="fer-nome">${ilustracao(f.nome, 30, f.nome)}<span>${esc(f.nome)}</span></span></td><td class="mono">${fmtMoney(f.valor_diaria)}</td>
     <td class="mono">${f.quantidade_disponivel}/${f.quantidade_total}</td>
     <td><span class="badge ${f.status==='disponivel'?'badge-ok':f.status==='manutencao'?'badge-warn':'badge-neutral'}">${f.status}</span></td>
     <td class="actions-cell">
@@ -1504,6 +1589,7 @@ function tableLocacoesCompleta(list){
           <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Recibo</button>
           <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'retirada')">Termo Retirada</button>
           ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'devolucao')">Termo Devolução</button>` : ''}
+          ${l.status!=='cancelada' ? `<button class="btn btn-dark btn-sm" onclick="abrirPix('${l.id}')">Pix</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
         </td>
@@ -1698,7 +1784,8 @@ function renderEmpresa(el){
           ${e.logo ? '<button type="button" class="btn btn-danger" id="remover-logo">Remover logo</button>' : ''}
         </div>
       </div>
-    </div>`;
+    </div>
+    ${painelPix(e)}`;
 
   document.getElementById('form-empresa').addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -1717,6 +1804,208 @@ function renderEmpresa(el){
   });
   const rem = document.getElementById('remover-logo');
   if(rem) rem.addEventListener('click', () => salvarEmpresa({ logo: null }));
+  ligarPainelPix(e);
+}
+
+/* ======================================================
+   RECEBER POR PIX (configuração da locadora)
+   ====================================================== */
+const TIPOS_CHAVE = { cnpj: 'CNPJ', cpf: 'CPF', celular: 'Celular', email: 'E-mail', aleatoria: 'Chave aleatória' };
+function asaasPermitidoCliente(e){ return e.plano === 'teste' || e.plano === 'ativo' || e.assinatura_plano === 'profissional'; }
+function painelPix(e){
+  const modo = e.pix_modo || '';
+  const podeAsaas = asaasPermitidoCliente(e);
+  const amb = e.loc_asaas_env === 'production' ? 'conta real' : 'conta de teste (sandbox)';
+  return `
+  <div class="panel" style="margin-top:16px;">
+    <h2>Receber por Pix</h2>
+    <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Gere QR Code e Pix copia e cola nas locações. O dinheiro cai direto na conta da sua locadora.</div>
+    <div class="pix-abas" role="radiogroup" aria-label="Forma de receber">
+      <label><input type="radio" name="pix-modo" value="" ${modo === '' ? 'checked' : ''}><span>Desativado</span></label>
+      <label><input type="radio" name="pix-modo" value="simples" ${modo === 'simples' ? 'checked' : ''}><span>Pix simples (sua chave)</span></label>
+      <label><input type="radio" name="pix-modo" value="asaas" ${modo === 'asaas' ? 'checked' : ''}><span>Pix com baixa automática (Asaas)</span></label>
+    </div>
+    <div id="pix-box-simples" class="${modo === 'simples' ? '' : 'hidden'}">
+      <div style="font-size:13px; margin-bottom:10px;">Sem taxa. O cliente paga pelo QR Code e você confirma o recebimento no sistema.</div>
+      <div class="row">
+        <div class="field"><label for="pix-tipo">Tipo da chave</label><select id="pix-tipo">${Object.entries(TIPOS_CHAVE).map(([k, v]) => `<option value="${k}" ${e.pix_tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label for="pix-chave">Chave Pix</label><input id="pix-chave" value="${esc(e.pix_modo === 'simples' ? (e.pix_tipo === 'celular' ? String(e.pix_chave || '').replace(/^\+55/, '') : e.pix_chave) : '')}" placeholder="A chave cadastrada no seu banco"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="pix-nome">Nome do recebedor</label><input id="pix-nome" maxlength="25" value="${esc(e.pix_nome || e.nome || '')}"></div>
+        <div class="field"><label for="pix-cidade">Cidade</label><input id="pix-cidade" maxlength="15" value="${esc(e.pix_cidade || e.cidade || '')}"></div>
+      </div>
+      <button type="button" class="btn btn-primary" id="pix-salvar-simples">Salvar Pix simples</button>
+    </div>
+    <div id="pix-box-asaas" class="${modo === 'asaas' ? '' : 'hidden'}">
+      ${!podeAsaas ? `<div class="teste-aviso">A baixa automática pelo Asaas faz parte do plano <b>Profissional</b>. No seu plano, use o Pix simples.</div>` : `
+      ${modo === 'asaas' ? `<div class="teste-aviso" style="background:#E1F3EA; border-color:var(--green);">✅ Asaas conectado (${amb}). Os pagamentos entram sozinhos nas locações.</div>` : ''}
+      <ol class="pix-passos">
+        <li>Abra uma conta grátis em <b>asaas.com</b>, no nome da sua locadora.</li>
+        <li>No Asaas, vá em <b>Integrações → Chaves de API</b> e gere uma chave.</li>
+        <li>Cole a chave aqui. O LocaObra configura o resto sozinho.</li>
+      </ol>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;">O Asaas cobra uma tarifa por Pix recebido, conforme o plano da sua conta lá. A chave fica guardada criptografada.</div>
+      <div class="field"><label for="pix-api">Chave de API do Asaas</label><input id="pix-api" type="password" autocomplete="off" placeholder="${modo === 'asaas' ? 'Conectado — cole outra chave para trocar' : '$aact_...'}"></div>
+      <button type="button" class="btn btn-primary" id="pix-salvar-asaas">${modo === 'asaas' ? 'Trocar chave' : 'Conectar Asaas'}</button>`}
+    </div>
+    <div id="pix-box-off" class="${modo === '' ? '' : 'hidden'}" style="font-size:13px; color:var(--ink-soft);">
+      ${modo ? '' : 'Escolha uma das formas acima para começar a receber por Pix.'}
+    </div>
+  </div>`;
+}
+function ligarPainelPix(e){
+  const mostrar = () => {
+    const v = (document.querySelector('input[name=pix-modo]:checked') || {}).value || '';
+    document.getElementById('pix-box-simples').classList.toggle('hidden', v !== 'simples');
+    document.getElementById('pix-box-asaas').classList.toggle('hidden', v !== 'asaas');
+    const off = document.getElementById('pix-box-off');
+    off.classList.toggle('hidden', v !== '');
+    if(v === '' && e.pix_modo) off.innerHTML = '<button type="button" class="btn btn-danger" id="pix-desativar">Desativar recebimento por Pix</button>';
+    const d = document.getElementById('pix-desativar');
+    if(d) d.onclick = () => salvarPix({ modo: null }, 'Pix desativado');
+  };
+  document.querySelectorAll('input[name=pix-modo]').forEach(r => r.addEventListener('change', mostrar));
+  const s = document.getElementById('pix-salvar-simples');
+  if(s) s.onclick = () => salvarPix({ modo: 'simples', tipo: document.getElementById('pix-tipo').value, chave: document.getElementById('pix-chave').value,
+    nome: document.getElementById('pix-nome').value, cidade: document.getElementById('pix-cidade').value }, 'Pix simples configurado');
+  const a = document.getElementById('pix-salvar-asaas');
+  if(a) a.onclick = () => {
+    const k = document.getElementById('pix-api').value.trim();
+    if(!k){ toast('Cole a chave de API do Asaas', false); return; }
+    salvarPix({ modo: 'asaas', api_key: k }, 'Asaas conectado');
+  };
+}
+async function salvarPix(corpo, msg){
+  const btns = document.querySelectorAll('#pix-salvar-simples, #pix-salvar-asaas, #pix-desativar');
+  btns.forEach(b => b.disabled = true);
+  const resp = await apiFetch('/api/pix/config', { method: 'POST', body: JSON.stringify(corpo) });
+  btns.forEach(b => b.disabled = false);
+  if(!resp.ok){ toast(resp.data?.message || 'Erro ao salvar o Pix', false); return; }
+  aplicarEmpresa(resp.data);
+  toast(resp.data.webhook_criado === false ? 'Asaas conectado. Aviso automático não foi criado: o sistema vai conferir os pagamentos ao abrir a cobrança.' : msg);
+  render('empresa');
+}
+
+/* ======================================================
+   COBRAR POR PIX (uma locação)
+   ====================================================== */
+let PIX_TIMER = null;
+// datas do servidor vêm em UTC; mostra no horário de Brasília
+function dataBR(utc){ const d = new Date(String(utc || '').replace(' ', 'T') + (String(utc).includes('Z') ? '' : 'Z')); return isNaN(d) ? String(utc || '').slice(0, 10) : new Date(d.getTime() - 3 * 3600000).toISOString().slice(0, 10); }
+function saldoLocacao(loc){
+  const pago = DB.pagamentos.filter(p => p.locacao_id === loc.id && p.tipo === 'pagamento').reduce((t, p) => t + Number(p.valor || 0), 0);
+  return Math.max(0, Math.round((Number(loc.valor_total || 0) + Number(loc.valor_multa || 0) - pago) * 100) / 100);
+}
+function fecharPix(){
+  clearInterval(PIX_TIMER); PIX_TIMER = null;
+  const f = document.getElementById('pix-fundo'); if(f) f.remove();
+  document.removeEventListener('keydown', escPix);
+}
+function escPix(ev){ if(ev.key === 'Escape') fecharPix(); }
+async function abrirPix(locId){
+  fecharPix();
+  const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
+  const cli = DB.clientes.find(c => c.id === loc.cliente_id);
+  const fundo = document.createElement('div');
+  fundo.id = 'pix-fundo'; fundo.className = 'pix-fundo';
+  fundo.innerHTML = `<div class="pix-caixa" role="dialog" aria-modal="true" aria-labelledby="pix-tit">
+    <div class="pix-topo"><div><h2 id="pix-tit">Cobrar por Pix</h2><div style="font-size:13px; color:var(--ink-soft);">Locação #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}</div></div>
+    <button class="pix-fechar" aria-label="Fechar" onclick="fecharPix()">×</button></div>
+    <div id="pix-corpo"><div class="empty">Carregando…</div></div></div>`;
+  fundo.addEventListener('click', ev => { if(ev.target === fundo) fecharPix(); });
+  document.body.appendChild(fundo);
+  document.addEventListener('keydown', escPix);
+  await atualizarPix(loc, cli);
+}
+async function atualizarPix(loc, cli, focoId){
+  const corpo = document.getElementById('pix-corpo'); if(!corpo) return;
+  const e = EMPRESA;
+  if(!e.pix_modo){
+    corpo.innerHTML = `<div class="empty" style="padding:14px 0;">O recebimento por Pix ainda não foi configurado.</div>
+      ${PAPEL === 'admin' ? `<button class="btn btn-primary" style="width:100%" onclick="fecharPix(); document.querySelector('[data-view=empresa]').click()">Configurar em Minha empresa</button>` : '<div style="font-size:13px; text-align:center;">Peça ao administrador para configurar em Minha empresa.</div>'}`;
+    return;
+  }
+  const r = await apiFetch(`/api/locacoes/${loc.id}/pix`);
+  if(!document.getElementById('pix-corpo')) return;
+  const lista = r.ok ? r.data : [];
+  const pend = lista.find(c => c.status === 'pendente' && (!focoId || c.id === focoId)) || lista.find(c => c.status === 'pendente');
+  const hist = lista.filter(c => c !== pend);
+  const histHtml = hist.length ? `<div class="pix-hist"><b>Histórico</b>${hist.map(c => `<div><span>${fmtDate(dataBR(c.criado_em))}${c.descricao ? ' · ' + esc(c.descricao) : ''}</span><span class="mono">${fmtMoney(c.valor)} <span class="badge ${c.status === 'paga' ? 'badge-ok' : c.status === 'cancelada' ? 'badge-neutral' : 'badge-warn'}">${c.status}</span></span></div>`).join('')}</div>` : '';
+  if(pend){
+    let qr = '';
+    try{ qr = await gerarQRCodeDataURL(pend.payload); }catch(err){}
+    corpo.innerHTML = `
+      <div class="pix-valor">${fmtMoney(pend.valor)}</div>
+      ${pend.descricao ? `<div style="text-align:center; font-size:13px; color:var(--ink-soft);">${esc(pend.descricao)}</div>` : ''}
+      ${qr ? `<img class="pix-qr" src="${qr}" alt="QR Code Pix">` : ''}
+      <label for="pix-copia" style="font-size:12px;">Pix copia e cola</label>
+      <textarea id="pix-copia" class="pix-copia" readonly>${esc(pend.payload)}</textarea>
+      <div class="actions-cell" style="margin-top:8px;">
+        <button class="btn btn-outline btn-sm" onclick="copiarPix()">Copiar código</button>
+        <button class="btn btn-outline btn-sm" onclick="enviarPixWhatsapp('${loc.id}', '${pend.id}')">Enviar no WhatsApp</button>
+        ${pend.fatura_url ? `<a class="btn btn-outline btn-sm" href="${esc(pend.fatura_url)}" target="_blank" rel="noopener">Abrir fatura</a>` : ''}
+      </div>
+      <div style="margin-top:12px; font-size:13px; padding:10px; border-radius:6px; background:#F7F5F0;">
+        ${pend.modo === 'asaas' ? '⏳ Aguardando pagamento. Quando o cliente pagar, a baixa entra sozinha.' : 'Quando o dinheiro cair na sua conta, confirme abaixo para registrar o pagamento.'}
+      </div>
+      <div class="actions-cell" style="margin-top:10px;">
+        ${pend.modo === 'simples' ? `<button class="btn btn-primary" onclick="acaoPix('${loc.id}', '${pend.id}', 'pago')">Confirmar recebimento</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="acaoPix('${loc.id}', '${pend.id}', 'cancelar')">Cancelar cobrança</button>
+      </div>
+      ${histHtml}`;
+    window.__PIX_ATUAL = { loc, cli, pend };
+    clearInterval(PIX_TIMER);
+    if(pend.modo === 'asaas') PIX_TIMER = setInterval(async () => {
+      const rr = await apiFetch(`/api/locacoes/${loc.id}/pix`);
+      const c = rr.ok && rr.data.find(x => x.id === pend.id);
+      if(c && c.status === 'paga'){ clearInterval(PIX_TIMER); toast(`Pix de ${fmtMoney(c.valor)} recebido!`); await loadAll(); atualizarPix(loc, cli); }
+    }, 6000);
+    return;
+  }
+  clearInterval(PIX_TIMER);
+  const saldo = saldoLocacao(loc);
+  corpo.innerHTML = `
+    <form id="form-pix">
+      <div class="field"><label for="pix-valor">Valor a cobrar (R$)</label><input id="pix-valor" type="number" step="0.01" min="1" required value="${saldo >= 1 ? saldo.toFixed(2) : ''}"></div>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 10px;">Em aberto nesta locação: <b>${fmtMoney(saldo)}</b></div>
+      <div class="field"><label for="pix-desc">Descrição (opcional)</label><input id="pix-desc" maxlength="80" list="pix-sugestoes" placeholder="Ex.: Sinal, Saldo, Multa por atraso">
+        <datalist id="pix-sugestoes"><option value="Sinal"><option value="Saldo"><option value="Pagamento total"><option value="Multa por atraso"></datalist></div>
+      <button type="submit" class="btn btn-primary" style="width:100%">Gerar Pix</button>
+      ${e.pix_modo === 'asaas' ? '<div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">A cobrança é criada na sua conta Asaas e a baixa é automática.</div>' : ''}
+    </form>${histHtml}`;
+  document.getElementById('form-pix').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Gerando…';
+    const resp = await apiFetch(`/api/locacoes/${loc.id}/pix`, { method: 'POST', body: JSON.stringify({
+      valor: Number(document.getElementById('pix-valor').value), descricao: document.getElementById('pix-desc').value }) });
+    if(!resp.ok){ toast(resp.data?.message || 'Erro ao gerar o Pix', false); btn.disabled = false; btn.textContent = 'Gerar Pix'; return; }
+    atualizarPix(loc, cli, resp.data.id);
+  });
+}
+function copiarPix(){
+  const t = document.getElementById('pix-copia'); if(!t) return;
+  t.select();
+  (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('Código Pix copiado'))
+    .catch(() => { try{ document.execCommand('copy'); toast('Código Pix copiado'); }catch(e){ toast('Copie o código manualmente', false); } });
+}
+function enviarPixWhatsapp(locId, cobId){
+  const a = window.__PIX_ATUAL; if(!a || a.pend.id !== cobId) return;
+  const { loc, cli, pend } = a;
+  if(!cli || !cli.telefone){ toast('Cliente sem telefone cadastrado', false); return; }
+  const msg = `Olá, ${cli.nome}! Segue o Pix da locação #${fmtNumero(loc)}${pend.descricao ? ' (' + pend.descricao + ')' : ''}, no valor de ${fmtMoney(pend.valor)}.\n\n`
+    + (pend.fatura_url ? `Pague pelo link: ${pend.fatura_url}\n\nOu use o Pix copia e cola:\n` : 'Pix copia e cola:\n') + pend.payload + `\n\n— ${EMPRESA.nome}`;
+  const dig = String(cli.telefone).replace(/\D/g, '');
+  window.open(`https://wa.me/${dig.startsWith('55') ? dig : '55' + dig}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+async function acaoPix(locId, cobId, acao){
+  if(acao === 'cancelar' && !confirm('Cancelar esta cobrança Pix?')) return;
+  const resp = await apiFetch(`/api/pix/${cobId}/${acao}`, { method: 'POST' });
+  if(!resp.ok){ toast(resp.data?.message || 'Erro', false); return; }
+  toast(acao === 'pago' ? 'Pagamento registrado na locação' : 'Cobrança cancelada');
+  await loadAll();
+  const loc = DB.locacoes.find(l => l.id === locId), cli = loc && DB.clientes.find(c => c.id === loc.cliente_id);
+  if(loc) atualizarPix(loc, cli);
 }
 
 async function salvarEmpresa(corpo){

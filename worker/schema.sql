@@ -28,7 +28,17 @@ CREATE TABLE IF NOT EXISTS empresas (
   fatura_url TEXT,
   fundador INTEGER NOT NULL DEFAULT 0,
   preco_travado_ate TEXT,
-  ultimo_sync INTEGER
+  ultimo_sync INTEGER,
+  -- recebimento por Pix da própria locadora
+  pix_modo TEXT,                              -- NULL | simples | asaas
+  pix_chave TEXT,
+  pix_tipo TEXT,                              -- cpf | cnpj | celular | email | aleatoria
+  pix_nome TEXT,
+  pix_cidade TEXT,
+  loc_asaas_key TEXT,                         -- chave de API da locadora, criptografada (AES-GCM)
+  loc_asaas_env TEXT,                         -- sandbox | production
+  loc_asaas_wh_token TEXT,
+  loc_asaas_wh_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -126,6 +136,24 @@ CREATE TABLE IF NOT EXISTS eventos_asaas (
   id TEXT PRIMARY KEY,
   criado_em TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS cobrancas_pix (
+  id TEXT PRIMARY KEY,
+  empresa_id TEXT NOT NULL REFERENCES empresas(id),
+  locacao_id TEXT NOT NULL REFERENCES locacoes(id),
+  modo TEXT NOT NULL,                         -- simples | asaas
+  asaas_id TEXT,
+  valor REAL NOT NULL,
+  descricao TEXT,
+  status TEXT NOT NULL DEFAULT 'pendente',    -- pendente | paga | cancelada
+  payload TEXT NOT NULL,                      -- Pix copia e cola
+  fatura_url TEXT,
+  ultimo_check INTEGER,
+  criado_em TEXT DEFAULT (datetime('now')),
+  pago_em TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cobrancas_locacao ON cobrancas_pix(empresa_id, locacao_id);
+CREATE INDEX IF NOT EXISTS idx_cobrancas_asaas ON cobrancas_pix(asaas_id);
 
 CREATE INDEX IF NOT EXISTS idx_empresas_assinatura ON empresas(assinatura_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_empresa ON usuarios(empresa_id);
