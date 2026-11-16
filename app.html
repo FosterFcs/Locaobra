@@ -371,7 +371,7 @@ tr:hover td{background:#F2EFE8;}
       <div class="login-error" id="cad-error"></div>
       <span class="login-switch">Já tem conta? <a id="ir-login">Entrar</a></span>
     </form>
-    <div class="dev-signature">Desenvolvido por Foster Tech Soluções</div>
+    <div class="dev-signature" style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg class="bandeira" viewBox="0 0 28 20" width="16" height="11" role="img" aria-label="Bandeira do Brasil"><rect width="28" height="20" rx="2" fill="#009C3B"/><path d="M14 2.5 25.5 10 14 17.5 2.5 10z" fill="#FFDF00"/><circle cx="14" cy="10" r="4.6" fill="#002776"/><path d="M9.6 9.2c3-.9 6.1-.5 8.8 1" stroke="#fff" stroke-width=".9" fill="none"/></svg><span>© <span class="ano-atual">2026</span> Foster Tech Soluções</span></div>
   </div>
 </div>
 
@@ -395,7 +395,7 @@ tr:hover td{background:#F2EFE8;}
     <div class="sidebar-footer">
       <button class="logout-btn" id="backup-btn" style="margin-bottom:6px;" onclick="exportarBackup()">⬇ Backup dos dados</button>
       <button class="logout-btn" id="logout-btn">↩ Sair</button>
-      <div class="dev-signature dev-signature-sidebar">LocaObra · Foster Tech Soluções</div>
+      <div class="dev-signature dev-signature-sidebar" style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg class="bandeira" viewBox="0 0 28 20" width="16" height="11" role="img" aria-label="Bandeira do Brasil"><rect width="28" height="20" rx="2" fill="#009C3B"/><path d="M14 2.5 25.5 10 14 17.5 2.5 10z" fill="#FFDF00"/><circle cx="14" cy="10" r="4.6" fill="#002776"/><path d="M9.6 9.2c3-.9 6.1-.5 8.8 1" stroke="#fff" stroke-width=".9" fill="none"/></svg><span>© <span class="ano-atual">2026</span> Foster Tech Soluções</span></div>
     </div>
   </div>
 
@@ -565,6 +565,7 @@ function escurecer(hexCor, fator){
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+document.querySelectorAll('.ano-atual').forEach(e => e.textContent = new Date().getFullYear());
 function aplicarEmpresa(emp, papel){
   if(emp) EMPRESA = { ...EMPRESA, ...emp };
   if(papel) PAPEL = papel;
@@ -2117,7 +2118,7 @@ function desenharRodapePDF(doc){
     doc.line(15, 282, 195, 282);
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
     doc.setTextColor(140,140,140);
-    doc.text('Gerado pelo LocaObra · Foster Tech Soluções', 15, 288);
+    doc.text(`Gerado pelo LocaObra · © ${new Date().getFullYear()} Foster Tech Soluções`, 15, 288);
     doc.text(`Página ${i} de ${pageCount}`, 195, 288, {align:'right'});
     doc.setTextColor(0,0,0);
   }
