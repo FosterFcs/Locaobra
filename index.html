@@ -13,7 +13,7 @@
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Foster Tech Soluções">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"LocaObra","applicationCategory":"BusinessApplication","operatingSystem":"Web, Android, iOS","inLanguage":"pt-BR","offers":{"@type":"AggregateOffer","priceCurrency":"BRL","lowPrice":"39.90","highPrice":"89.90"},"author":{"@type":"Person","name":"Wilson Foster","jobTitle":"Engenheiro Civil"},"publisher":{"@type":"Organization","name":"Foster Tech Soluções"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"LocaObra","applicationCategory":"BusinessApplication","operatingSystem":"Web, Android, iOS","inLanguage":"pt-BR","offers":{"@type":"AggregateOffer","priceCurrency":"BRL","lowPrice":"39.90","highPrice":"89.90"},"publisher":{"@type":"Organization","name":"Foster Tech Soluções"}}</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='50,4 93,27 93,73 50,96 7,73 7,27' fill='%231E2023' stroke='%23E00000' stroke-width='7'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial' font-weight='700' font-size='50' fill='%23E00000'%3EL%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -181,6 +181,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;
 footer a{color:#C9CCD1;text-decoration:none}
 footer a:hover{color:#fff}
 footer .ass{color:#C9CCD1}
+.bandeira{flex-shrink:0;border-radius:2px}
 
 .zap{position:fixed;right:18px;bottom:18px;z-index:30;width:56px;height:56px;border-radius:50%;background:#25D366;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .zap svg{width:30px;height:30px;fill:#fff}
@@ -392,8 +393,7 @@ footer .ass{color:#C9CCD1}
   <div class="wrap">
     <div>
       <div class="disp" style="color:#fff;font-size:18px">Loca<span style="color:var(--red)">Obra</span></div>
-      <div>Um produto Foster Tech Soluções</div>
-      <div class="ass">Wilson Foster · Engenheiro Civil · CREA/SP</div>
+      <div class="ass" style="display:flex;align-items:center;gap:8px"><svg class="bandeira" viewBox="0 0 28 20" width="21" height="15" role="img" aria-label="Bandeira do Brasil"><rect width="28" height="20" rx="2" fill="#009C3B"/><path d="M14 2.5 25.5 10 14 17.5 2.5 10z" fill="#FFDF00"/><circle cx="14" cy="10" r="4.6" fill="#002776"/><path d="M9.6 9.2c3-.9 6.1-.5 8.8 1" stroke="#fff" stroke-width=".9" fill="none"/></svg><span>© <span id="ano">2026</span> Foster Tech Soluções · Feito no Brasil</span></div>
     </div>
     <div style="display:flex;gap:20px;flex-wrap:wrap">
       <a href="app.html">Entrar</a>
@@ -416,6 +416,7 @@ footer .ass{color:#C9CCD1}
     document.getElementById('equip').innerHTML = itens.map(function(n){ return '<div>' + ilustracao(n, 56, n) + n + '</div>'; }).join('');
   }catch(e){ var q = document.getElementById('equip'); if(q) q.closest('section').style.display = 'none'; }
 })();
+try{ document.getElementById('ano').textContent = new Date().getFullYear(); }catch(e){}
 (function(){
   var API = 'https://locaobra-worker.fosterconstrutora.workers.dev';
   var P = { essencial:{usuarios:2,mensal:49.90,anual:478.80}, profissional:{usuarios:5,mensal:89.90,anual:838.80} };
