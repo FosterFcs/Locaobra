@@ -2,1653 +2,427 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-  
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>LocaObra — Gestão de Locação de Ferramentas</title>
-<meta name="description" content="LocaObra: sistema para locadoras de ferramentas e equipamentos de obra. Controle de contratos, estoque, devoluções, clientes e recibos em PDF.">
-<link rel="canonical" href="https://fosterfcs.github.io/Locaobra/">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocaObra — Sistema para locadora de ferramentas e equipamentos</title>
+<meta name="description" content="Sistema para locadoras de ferramentas e equipamentos de obra: contratos e recibos em PDF com a sua marca, estoque automático, controle de atrasos e multa, lembrete por WhatsApp. Teste grátis por 30 dias.">
+<meta name="theme-color" content="#1E2023">
 <meta property="og:type" content="website">
-<meta property="og:title" content="LocaObra — Gestão de Locação de Ferramentas">
-<meta property="og:description" content="LocaObra: sistema para locadoras de ferramentas e equipamentos de obra. Controle de contratos, estoque, devoluções, clientes e recibos em PDF.">
-<meta property="og:url" content="https://fosterfcs.github.io/Locaobra/">
+<meta property="og:title" content="LocaObra — Sua locadora de ferramentas no controle">
+<meta property="og:description" content="Contratos em PDF com sua marca, estoque automático e controle de devoluções atrasadas. Teste grátis por 30 dias.">
+<meta property="og:image" content="https://fosterfcs.github.io/Locaobra/img/tela-dashboard.webp">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Foster Tech Soluções">
-<meta name="twitter:card" content="summary">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "LocaObra", "url": "https://fosterfcs.github.io/Locaobra/", "description": "LocaObra: sistema para locadoras de ferramentas e equipamentos de obra. Controle de contratos, estoque, devoluções, clientes e recibos em PDF.", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android, iOS", "inLanguage": "pt-BR", "author": {"@type": "Person", "name": "Wilson Foster", "jobTitle": "Engenheiro Civil"}, "publisher": {"@type": "Organization", "name": "Foster Tech Soluções", "url": "https://engfoster.com.br/"}}</script>
-
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"LocaObra","applicationCategory":"BusinessApplication","operatingSystem":"Web, Android, iOS","inLanguage":"pt-BR","offers":{"@type":"AggregateOffer","priceCurrency":"BRL","lowPrice":"39.90","highPrice":"89.90"},"author":{"@type":"Person","name":"Wilson Foster","jobTitle":"Engenheiro Civil"},"publisher":{"@type":"Organization","name":"Foster Tech Soluções"}}</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='50,4 93,27 93,73 50,96 7,73 7,27' fill='%231E2023' stroke='%23E00000' stroke-width='7'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial' font-weight='700' font-size='50' fill='%23E00000'%3EL%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
-  onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.0/umd/supabase.min.js';document.head.appendChild(s);"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --charcoal:#1E2023;
-  --charcoal-2:#2A2D31;
-  --steel:#4A4E57;
-  --amber:#E00000;
-  --amber-dark:#B80000;
-  --concrete:#EDEAE3;
-  --concrete-2:#F7F5F0;
-  --ink:#24262A;
-  --ink-soft:#5B5F66;
-  --green:#2F9E6E;
-  --red:#D64545;
-  --line:#DDD8CE;
-  --radius:6px;
+  --char:#1E2023; --char-2:#2A2D31; --char-3:#34373C;
+  --red:#E00000; --red-d:#B80000;
+  --conc:#EDEAE3; --conc-2:#F7F5F0; --line:#DDD8CE;
+  --ink:#24262A; --soft:#5B5F66; --green:#2F9E6E;
+  --r:8px; --max:1120px;
 }
-*{box-sizing:border-box; margin:0; padding:0;}
-body{
-  font-family:'Inter',sans-serif;
-  background:var(--concrete);
-  color:var(--ink);
-  min-height:100vh;
-}
-h1,h2,h3,.display{
-  font-family:'Oswald',sans-serif;
-  font-weight:700;
-  letter-spacing:0.02em;
-  text-transform:uppercase;
-}
-.mono{font-family:'JetBrains Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--conc-2);line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+h1,h2,h3,.disp{font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.01em;text-transform:uppercase;line-height:1.1}
+.mono{font-family:'JetBrains Mono',monospace}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+.hazard{height:6px;background:repeating-linear-gradient(135deg,var(--char) 0 14px,var(--red) 14px 28px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;border-radius:var(--r);padding:14px 26px;font-size:16px;border:2px solid transparent;cursor:pointer;transition:transform .12s,background .15s,border-color .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:var(--red-d)}
+.btn-ghost{border-color:rgba(255,255,255,.35);color:#fff}
+.btn-ghost:hover{border-color:#fff}
+.btn-dark{background:var(--char);color:#fff}
+.btn-out{border-color:var(--char);color:var(--char);background:transparent}
 
-/* ---- hazard stripe signature ---- */
-.hazard{
-  height:6px;
-  background:repeating-linear-gradient(135deg,var(--charcoal) 0 14px, var(--amber) 14px 28px);
-}
+/* topo */
+header.top{position:sticky;top:0;z-index:20;background:var(--char);color:#fff}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:62px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo .disp{font-size:22px;color:#fff}
+.logo .disp span{color:var(--red)}
+.top nav{display:flex;align-items:center;gap:22px}
+.top nav a{text-decoration:none;font-size:14px;color:#C9CCD1;font-weight:500}
+.top nav a:hover{color:#fff}
+.top .btn{padding:9px 16px;font-size:14px}
+@media (max-width:760px){.top nav a.lk{display:none}}
 
-/* ---- layout ---- */
-.app{display:flex; min-height:100vh;}
-.sidebar{
-  width:220px; background:var(--charcoal); color:var(--concrete-2);
-  flex-shrink:0; display:flex; flex-direction:column;
+/* hero */
+.hero{background:linear-gradient(160deg,var(--char) 0%,var(--char-2) 100%);color:#fff;overflow:hidden;position:relative}
+.hero .wrap{display:grid;grid-template-columns:1.02fr 1fr;gap:48px;align-items:center;padding-top:64px;padding-bottom:72px}
+.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(224,0,0,.14);border:1px solid rgba(224,0,0,.5);color:#FF8A8A;font-size:13px;font-weight:600;padding:6px 12px;border-radius:99px;margin-bottom:20px}
+.selo b{color:#fff}
+.hero h1{font-size:clamp(34px,5vw,54px);margin-bottom:18px}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero p.sub{font-size:18px;color:#C9CCD1;max-width:540px;margin-bottom:28px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.hero small{color:#9CA0A8;font-size:13.5px}
+.vitrine{position:relative}
+.browser{background:#111;border-radius:10px;box-shadow:0 30px 70px rgba(0,0,0,.5);overflow:hidden;border:1px solid #3a3d42}
+.browser .barra{display:flex;gap:6px;padding:9px 12px;background:#2b2e33}
+.browser .barra i{width:10px;height:10px;border-radius:50%;background:#55585e}
+.fone{position:absolute;right:-18px;bottom:-36px;width:27%;aspect-ratio:9/17;border:6px solid #0d0e10;border-radius:24px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6);background:#0d0e10}
+.fone img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:17px}
+@media (max-width:900px){
+  .hero .wrap{grid-template-columns:1fr;padding-top:44px;gap:40px}
+  .fone{right:-4px;width:30%;bottom:-28px}
 }
-.brand{
-  padding:22px 20px 16px; border-bottom:1px solid #34373B;
-}
-.brand .display{font-size:26px; color:var(--amber); line-height:1;}
-.brand .sub{font-size:11px; color:#9CA0A8; letter-spacing:0.08em; margin-top:2px;}
-nav{padding:14px 10px; flex:1;}
-nav button{
-  display:flex; align-items:center; gap:10px; width:100%;
-  background:none; border:none; color:#C9CCD1; text-align:left;
-  padding:11px 12px; border-radius:var(--radius); font-size:14px; font-weight:500;
-  cursor:pointer; margin-bottom:2px; transition:background .15s;
-}
-nav button:hover{background:#2C2F34;}
-nav button.active{background:var(--amber); color:var(--charcoal); font-weight:700;}
-nav .icon{width:18px; text-align:center; font-size:15px;}
-
-.main{flex:1; display:flex; flex-direction:column; min-width:0;}
-.topbar{
-  background:var(--concrete-2); border-bottom:1px solid var(--line);
-  padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
-}
-.topbar h1{font-size:24px; color:var(--ink);}
-.content{padding:26px 28px 60px; overflow-y:auto;}
-
-/* ---- cards / stats ---- */
-.grid{display:grid; gap:16px;}
-.grid-4{grid-template-columns:repeat(4,1fr);}
-.grid-2{grid-template-columns:1fr 1fr;}
-@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-2{grid-template-columns:1fr;} .sidebar{width:70px;} .brand .display{display:none;} nav button span.label{display:none;}}
-
-.stat{
-  background:var(--concrete-2); border:1px solid var(--line); border-radius:var(--radius);
-  padding:16px 18px; position:relative; overflow:hidden;
-}
-.stat::before{content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--amber);}
-.stat .num{font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:600; color:var(--ink);}
-.stat .lbl{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;}
-.stat.warn::before{background:var(--red);}
-.stat.ok::before{background:var(--green);}
-
-.panel{
-  background:var(--concrete-2); border:1px solid var(--line); border-radius:var(--radius);
-  padding:20px; margin-bottom:18px;
-}
-.panel h2{font-size:19px; margin-bottom:14px; color:var(--ink); display:flex; align-items:center; gap:8px;}
-.panel h2 .tag{
-  font-family:'JetBrains Mono',monospace; font-size:10px; background:var(--amber); color:var(--charcoal);
-  padding:2px 6px; border-radius:3px; text-transform:none; letter-spacing:0;
+@media (max-width:520px){
+  .browser{display:none}
+  .fone{position:static;width:64%;margin:0 auto}
 }
 
-/* ---- forms ---- */
-label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;}
-input,select,textarea{
-  width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
-  font-family:'Inter',sans-serif; font-size:14px; background:#fff; color:var(--ink);
-}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
-.field{margin-bottom:13px;}
-.row{display:flex; gap:12px;}
-.row > *{flex:1;}
+/* faixa de dores */
+.dores{background:#fff;border-bottom:1px solid var(--line)}
+.dores .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.dor{padding:28px 22px;border-left:1px solid var(--line)}
+.dor:first-child{border-left:none}
+.dor .x{font-size:14px;color:var(--soft);text-decoration:line-through;text-decoration-color:var(--red);margin-bottom:6px}
+.dor .v{font-weight:600}
+@media (max-width:760px){.dores .wrap{grid-template-columns:1fr}.dor{border-left:none;border-top:1px solid var(--line)}.dor:first-child{border-top:none}}
 
-button.btn{
-  font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer;
-  border:none; border-radius:var(--radius); padding:10px 18px; transition:transform .1s, opacity .15s;
-}
-button.btn:active{transform:scale(0.98);}
-.btn-primary{background:var(--amber); color:var(--charcoal);}
-.btn-primary:hover{background:var(--amber-dark);}
-.btn-dark{background:var(--charcoal); color:#fff;}
-.btn-dark:hover{opacity:0.85;}
-.btn-outline{background:none; border:1.5px solid var(--charcoal); color:var(--charcoal);}
-.btn-outline:hover{background:var(--charcoal); color:#fff;}
-.btn-sm{padding:6px 12px; font-size:12.5px;}
-.btn-danger{background:none; color:var(--red); border:1.5px solid var(--red);}
-button.btn.btn-outline{border:1.5px solid var(--charcoal);}
-button.btn.btn-danger{border:1.5px solid var(--red);}
+section{padding:80px 0}
+.tit{max-width:680px;margin-bottom:40px}
+.tit .k{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--red);font-weight:600;letter-spacing:.06em;margin-bottom:10px;text-transform:uppercase}
+.tit h2{font-size:clamp(28px,3.6vw,40px);margin-bottom:12px}
+.tit p{color:var(--soft);font-size:17px}
 
-/* ---- table ---- */
-table{width:100%; border-collapse:collapse; font-size:13.5px;}
-th{
-  text-align:left; padding:9px 10px; background:var(--charcoal); color:var(--concrete-2);
-  font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase; font-size:12px; letter-spacing:0.04em;
-}
-th:first-child{border-radius:5px 0 0 0;} th:last-child{border-radius:0 5px 0 0;}
-td{padding:9px 10px; border-bottom:1px solid var(--line);}
-tr:hover td{background:#F2EFE8;}
+/* recursos */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px;border-top:3px solid var(--red)}
+.card .ic{width:40px;height:40px;border-radius:8px;background:var(--char);color:#fff;display:grid;place-items:center;margin-bottom:14px}
+.card .ic svg{width:21px;height:21px}
+.card h3{font-size:18px;margin-bottom:6px}
+.card p{color:var(--soft);font-size:15px}
+@media (max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
 
-.badge{
-  display:inline-block; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:700;
-  text-transform:uppercase; letter-spacing:0.03em;
-}
-.badge-ok{background:#E1F3EA; color:var(--green);}
-.badge-warn{background:#FDEBD3; color:var(--amber-dark);}
-.badge-bad{background:#FBE4E4; color:var(--red);}
-.badge-neutral{background:#E8E6E0; color:var(--ink-soft);}
+/* destaques com imagem */
+.dest{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.dest+.dest{margin-top:80px}
+.dest.inv .txt{order:2}
+.dest .txt h2{font-size:clamp(26px,3.2vw,36px);margin-bottom:14px}
+.dest .txt p{color:var(--soft);font-size:17px;margin-bottom:16px}
+.dest ul{list-style:none}
+.dest li{padding-left:28px;position:relative;margin-bottom:9px}
+.dest li::before{content:"";position:absolute;left:2px;top:7px;width:14px;height:8px;border-left:3px solid var(--green);border-bottom:3px solid var(--green);transform:rotate(-45deg)}
+.dest .img{border-radius:var(--r);overflow:hidden;box-shadow:0 18px 50px rgba(30,32,35,.18);border:1px solid var(--line);background:#fff}
+.dest .img.pdf{max-width:420px;margin:0 auto;transform:rotate(-1.5deg)}
+@media (max-width:860px){.dest{grid-template-columns:1fr;gap:28px}.dest.inv .txt{order:0}}
 
-.item-row{display:flex; gap:10px; align-items:end; margin-bottom:10px; padding:10px; background:#F7F5F0; border-radius:var(--radius); border:1px dashed var(--line);}
-.item-row select, .item-row input{flex:1;}
-.item-row .qty{max-width:70px;}
-.item-row button{flex-shrink:0;}
+/* passos */
+.escuro{background:var(--char);color:#fff}
+.escuro .tit p{color:#C9CCD1}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:p}
+.passo{background:var(--char-2);border:1px solid var(--char-3);border-radius:var(--r);padding:26px}
+.passo::before{counter-increment:p;content:"0" counter(p);font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--red);font-size:30px;display:block;margin-bottom:8px}
+.passo h3{font-size:19px;margin-bottom:6px}
+.passo p{color:#B8BBC1;font-size:15px}
+@media (max-width:760px){.passos{grid-template-columns:1fr}}
 
-.summary-box{
-  background:var(--charcoal); color:#fff; border-radius:var(--radius); padding:16px 18px; margin-top:14px;
-}
-.summary-box .row{justify-content:space-between; margin-bottom:6px; font-size:14px;}
-.summary-box .row > *{flex:0 1 auto;}
-.summary-box .total{font-family:'JetBrains Mono',monospace; font-size:22px; color:var(--amber); font-weight:700;}
+/* planos */
+.toggle{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:99px;padding:4px;margin-bottom:28px}
+.toggle button{border:0;background:none;padding:9px 18px;border-radius:99px;font:600 14px 'Inter',sans-serif;cursor:pointer;color:var(--soft)}
+.toggle button.on{background:var(--char);color:#fff}
+.toggle .eco{color:var(--green);font-weight:700}
+.toggle button.on .eco{color:#7FE0B4}
+.fundador{display:flex;gap:14px;align-items:center;background:#fff;border:1px dashed var(--red);border-radius:var(--r);padding:16px 18px;margin-bottom:22px;max-width:760px}
+.fundador .n{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600;color:var(--red);line-height:1;min-width:44px;text-align:center}
+.planos{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:760px}
+.plano{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px;position:relative;display:flex;flex-direction:column}
+.plano.pro{border:2px solid var(--char)}
+.plano .tag{position:absolute;top:-12px;left:24px;background:var(--red);color:#fff;font:600 12px 'Inter',sans-serif;padding:4px 10px;border-radius:99px}
+.plano h3{font-size:22px}
+.plano .us{color:var(--soft);font-size:14px;margin-bottom:14px}
+.preco{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:38px;line-height:1}
+.preco small{font-size:15px;color:var(--soft);font-weight:500}
+.plano .obs{font-size:13px;color:var(--soft);min-height:20px;margin:6px 0 18px}
+.plano ul{list-style:none;margin-bottom:22px;flex:1}
+.plano li{padding:7px 0 7px 26px;position:relative;border-bottom:1px dashed var(--line);font-size:15px}
+.plano li::before{content:"";position:absolute;left:3px;top:13px;width:12px;height:7px;border-left:3px solid var(--green);border-bottom:3px solid var(--green);transform:rotate(-45deg)}
+.plano .btn{width:100%}
+.nota-planos{font-size:14px;color:var(--soft);margin-top:18px;max-width:760px}
+@media (max-width:640px){.planos{grid-template-columns:1fr}}
 
-.empty{text-align:center; padding:40px 20px; color:var(--ink-soft);}
-.empty .display{font-size:20px; color:var(--steel); margin-bottom:6px;}
+/* faq */
+.faq{max-width:780px}
+.faq details{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px}
+.faq summary{cursor:pointer;padding:18px 20px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:'JetBrains Mono',monospace;color:var(--red);font-size:20px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding:0 20px 18px;color:var(--soft)}
 
-.toast{
-  position:fixed; bottom:20px; right:20px; background:var(--charcoal); color:#fff;
-  padding:12px 18px; border-radius:var(--radius); font-size:14px; z-index:999;
-  border-left:4px solid var(--amber); box-shadow:0 6px 18px rgba(0,0,0,0.25);
-  display:none;
-}
-.hidden{display:none !important;}
-.actions-cell{display:flex; gap:6px;}
-.config-note{font-size:12.5px; color:var(--ink-soft); background:#FDEBD3; border:1px solid #F0D19A; padding:10px 12px; border-radius:var(--radius); margin-bottom:16px;}
+/* cta final */
+.final{background:var(--red);color:#fff;text-align:center}
+.final h2{font-size:clamp(28px,4vw,44px);margin-bottom:12px}
+.final p{font-size:18px;opacity:.92;margin-bottom:26px}
+.final .btn-dark:hover{background:#000}
 
-/* ---- login screen ---- */
-.login-wrap{
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  background:var(--charcoal);
-}
-.login-card{
-  width:100%; max-width:360px; background:var(--concrete-2); border-radius:var(--radius);
-  padding:32px 30px; box-shadow:0 20px 50px rgba(0,0,0,0.35); position:relative; overflow:hidden;
-}
-.login-card::before{content:''; position:absolute; left:0; top:0; right:0; height:5px; background:var(--amber);}
-.login-card .display{font-size:30px; color:var(--amber); text-align:center; margin-bottom:2px;}
-.login-card .sub{font-size:12px; color:var(--ink-soft); text-align:center; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:24px;}
-.login-card .field{margin-bottom:14px;}
-.login-card button{width:100%; margin-top:6px;}
-.login-error{color:var(--red); font-size:13px; margin-top:10px; display:none;}
-.logout-btn{
-  width:100%; margin:0; padding:9px 12px; border-radius:var(--radius); background:none; border:1px solid #3A3D42;
-  color:#9CA0A8; font-size:12.5px; cursor:pointer; text-align:left;
-}
-.logout-btn:hover{background:#2C2F34; color:#fff;}
-.logo-mark{width:64px; height:64px; display:block; margin:0 auto 10px;}
-.logo-mark-sm{width:38px; height:38px; margin:0 0 8px;}
-.dev-signature{
-  text-align:center; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.03em;
-  margin-top:20px; padding-top:14px; border-top:1px solid var(--line);
-}
-.sidebar-footer{padding:0 10px 14px;}
-.dev-signature-sidebar{
-  color:#6B6F76; font-size:9.5px; text-align:left; margin-top:8px; padding:0 2px;
-  border-top:none;
-}
-.topbar-logout{display:none;}
-@media(min-width:769px){
-  .panel{overflow-x:auto;}
-  td.actions-cell{display:table-cell; min-width:180px;}
-  td.actions-cell .btn{margin:2px 0 2px 4px;}
-}
+footer{background:var(--char);color:#9CA0A8;font-size:14px;padding:36px 0}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:center}
+footer a{color:#C9CCD1;text-decoration:none}
+footer a:hover{color:#fff}
+footer .ass{color:#C9CCD1}
 
-/* ======================================================
-   CELULAR (até 768px) — menu inferior, tabelas em cartões
-   ====================================================== */
-@media(max-width:768px){
-  .app{flex-direction:column;}
-
-  /* menu lateral vira barra fixa no rodapé */
-  .sidebar{
-    position:fixed; left:0; right:0; bottom:0; width:100%; z-index:100;
-    flex-direction:row; border-top:3px solid var(--amber);
-    padding-bottom:env(safe-area-inset-bottom);
-    box-shadow:0 -4px 16px rgba(0,0,0,0.25);
-  }
-  .brand, .sidebar-footer{display:none;}
-  nav{display:flex; padding:4px; gap:2px;}
-  nav button{
-    flex:1; flex-direction:column; justify-content:center; gap:3px;
-    padding:8px 2px; margin:0; font-size:10px; text-align:center; min-width:0;
-  }
-  nav button.active{font-weight:600;}
-  nav button span.label{display:block !important; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  nav .icon{font-size:18px; width:auto;}
-
-  .topbar{padding:12px 16px; gap:10px;}
-  .topbar h1{font-size:20px;}
-  .topbar-logout{
-    display:block; background:none; border:1.5px solid var(--charcoal); color:var(--charcoal);
-    border-radius:var(--radius); padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer;
-    font-family:'Inter',sans-serif; flex-shrink:0;
-  }
-  .content{padding:16px 14px calc(96px + env(safe-area-inset-bottom));}
-
-  /* cartões e painéis */
-  .grid{gap:10px;}
-  .panel{padding:16px 14px; margin-bottom:14px;}
-  .panel h2{font-size:17px;}
-  .stat{padding:12px 14px;}
-  .stat .num{font-size:20px; word-break:break-word;}
-  .stat .lbl{font-size:11px;}
-  #lista-comuns{grid-template-columns:1fr 1fr;}
-
-  /* formulários empilhados; 16px evita zoom automático no iPhone */
-  input,select,textarea{font-size:16px; padding:11px 12px;}
-  .row{flex-direction:column; gap:0;}
-  .row > .field{max-width:none !important;}
-  .summary-box .row{flex-direction:row; gap:12px;}
-  form button.btn, #resumo button.btn{flex:1;}
-  button.btn{min-height:42px;}
-  .btn-sm{min-height:36px;}
-
-  .item-row{flex-wrap:wrap;}
-  .item-row select{flex:1 1 100%;}
-  .item-row .qty{max-width:none; flex:1;}
-
-  /* tabelas viram cartões empilhados */
-  table, thead, tbody, tr, td{display:block; width:100%;}
-  thead{display:none;}
-  tr{
-    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
-    padding:6px 12px; margin-bottom:10px; border-left:4px solid var(--amber);
-  }
-  tr:hover td{background:none;}
-  td{
-    display:flex; justify-content:space-between; align-items:center; gap:12px;
-    padding:8px 0; border-bottom:1px dashed var(--line); text-align:right; word-break:break-word;
-  }
-  td::before{
-    content:attr(data-label); flex-shrink:0; text-align:left;
-    font-size:11px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em;
-  }
-  td:last-child{border-bottom:none;}
-  td.actions-cell, td[data-label=""]{justify-content:flex-start; flex-wrap:wrap; gap:6px; padding-top:10px;}
-  td.actions-cell::before, td[data-label=""]::before{display:none;}
-  td.actions-cell .btn{flex:1 1 auto;}
-
-  .toast{left:14px; right:14px; bottom:calc(84px + env(safe-area-inset-bottom)); text-align:center;}
-  .login-wrap{padding:16px;}
-  .login-card{padding:28px 20px;}
-}
+.zap{position:fixed;right:18px;bottom:18px;z-index:30;width:56px;height:56px;border-radius:50%;background:#25D366;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.zap svg{width:30px;height:30px;fill:#fff}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
 </style>
 </head>
 <body>
 
-<!-- LANDING PAGE -->
-<div id="landing-screen" style="min-height:100vh;background:#1E2023;font-family:'Inter',sans-serif;display:flex;flex-direction:column;">
-
-  <!-- HERO -->
-  <div style="background:linear-gradient(135deg,#1E2023,#2A2D31);padding:40px 24px 32px;text-align:center;">
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="64" height="64" style="margin-bottom:14px;">
-      <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="#E00000" stroke-width="6"/>
-      <text x="50" y="67" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="700" font-size="46" fill="#E00000">L</text>
-    </svg>
-    <h1 style="font-family:'Oswald',sans-serif;font-size:28px;color:white;font-weight:700;letter-spacing:1px;margin-bottom:4px;">
-      LOCA<span style="color:#E00000;">OBRA</span>
-    </h1>
-    <p style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">GESTÃO DE LOCAÇÃO DE FERRAMENTAS</p>
-    <p style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:24px;line-height:1.7;">
-      Controle completo do seu negócio de<br>locação de ferramentas e equipamentos
-    </p>
-    <a href="app.html#cadastro" style="background:#E00000;color:white;border:none;border-radius:6px;padding:16px 32px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;;text-decoration:none;box-sizing:border-box;">
-      TESTE GRÁTIS POR 30 DIAS
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#" aria-label="LocaObra, início">
+      <svg viewBox="0 0 100 100" width="32" height="32" aria-hidden="true"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="#E00000" stroke-width="7"/><text x="50" y="68" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="700" font-size="48" fill="#E00000">L</text></svg>
+      <span class="disp">Loca<span>Obra</span></span>
     </a>
-    <a href="app.html" style="background:#E00000;color:white;border:none;border-radius:6px;padding:16px 32px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;;background:transparent;border:2px solid #E00000;text-decoration:none;box-sizing:border-box;">
-      ACESSAR SISTEMA
-    </a>
-    <button onclick="entrarDemoLocaObra()"
-      style="background:transparent;color:rgba(255,255,255,0.7);border:2px solid rgba(255,255,255,0.3);border-radius:6px;padding:13px 32px;font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;display:block;margin-left:auto;margin-right:auto;">
-      👀 VER DEMONSTRAÇÃO
-    </button>
-  </div>
-
-  <!-- FUNCIONALIDADES -->
-  <div style="background:white;padding:28px 20px;flex:1;">
-    <h2 style="font-family:'Oswald',sans-serif;font-size:17px;color:#1E2023;text-align:center;margin-bottom:18px;letter-spacing:0.5px;">O QUE O SISTEMA FAZ</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:480px;margin:0 auto 20px;">
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">🔧</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Catálogo de Ferramentas</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Cadastro completo com disponibilidade em tempo real</div>
-      </div>
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">📋</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Contratos em PDF</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Contrato, recibo e termo de devolução automáticos</div>
-      </div>
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">👷</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Cadastro de Clientes</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Histórico completo por cliente com locações</div>
-      </div>
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">💰</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Controle Financeiro</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Receita, multas por atraso e dashboard de resultados</div>
-      </div>
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">📲</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Lembretes WhatsApp</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Aviso automático de devolução para o cliente</div>
-      </div>
-      <div style="background:#f8f8f8;border-radius:8px;padding:14px;border-left:3px solid #E00000;">
-        <div style="font-size:22px;margin-bottom:6px;">📊</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:#1E2023;">Dashboard em tempo real</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;">Locações ativas, receita e ferramentas disponíveis</div>
-      </div>
-    </div>
-
-    <!-- PLANOS -->
-    <h2 style="font-family:'Oswald',sans-serif;font-size:17px;color:#1E2023;text-align:center;margin-bottom:14px;letter-spacing:0.5px;">PLANOS E PREÇOS</h2>
-    <div style="display:flex;flex-direction:column;gap:8px;max-width:480px;margin:0 auto;">
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
-        <div><div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">📐 BÁSICO</div><div style="font-size:11px;color:#6b7280;">1 usuário · 50 ferramentas · PDF</div></div>
-        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 49</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
-      </div>
-      <div style="border:3px solid #E00000;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;background:#fff5f5;">
-        <div>
-          <div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">🔧 PROFISSIONAL <span style="background:#E00000;color:white;font-size:9px;padding:1px 7px;border-radius:3px;">POPULAR</span></div>
-          <div style="font-size:11px;color:#6b7280;">3 usuários · Ilimitado · Relatórios</div>
-        </div>
-        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 89</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
-      </div>
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
-        <div><div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;">🏢 EMPRESA</div><div style="font-size:11px;color:#6b7280;">Usuários ilimitados · Multi-filial</div></div>
-        <div style="text-align:right;"><div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#E00000;">R$ 149</div><div style="font-size:10px;color:#6b7280;">/mês</div></div>
-      </div>
-    </div>
-
-    <div style="text-align:center;margin-top:20px;">
-      <button onclick="assinarLocaObra()"
-        style="background:#E00000;color:white;border:none;border-radius:6px;padding:16px 32px;font-family:'Oswald',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;max-width:300px;">
-        CONTRATAR — 7 DIAS GRÁTIS
-      </button>
-      <div style="margin-top:10px;font-size:11px;color:#6b7280;">Sem cartão · Cancele quando quiser</div>
-    </div>
-  </div>
-
-  <!-- RODAPÉ -->
-  <div style="background:#1E2023;padding:20px;text-align:center;">
-    <a href="https://wa.me/5524992096103?text=Olá! Quero saber mais sobre o LocaObra — sistema de gestão de locação de ferramentas" 
-      style="display:inline-block;background:#25d366;color:white;border-radius:6px;padding:10px 20px;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:1px;margin-bottom:12px;">
-      📲 FALAR NO WHATSAPP
-    </a>
-    <p style="font-size:10px;color:rgba(255,255,255,0.4);line-height:1.8;margin:0;">
-      Desenvolvido por <strong style="color:rgba(255,255,255,0.7);">Wilson Foster</strong><br>
-      Engenheiro Civil | Gestor de Produto<br>
-      comercial@fosterconstrucoes.com.br
-    </p>
-  </div>
-</div>
-
-<div class="login-wrap hidden" id="login-screen">
-  <div class="login-card">
-    <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="var(--amber)" stroke-width="6"/>
-      <text x="50" y="67" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="46" fill="var(--amber)">L</text>
-    </svg>
-    <div class="display">LocaObra</div>
-    <div class="sub">Locação de Ferramentas</div>
-    <form id="form-login">
-      <div class="field"><label>E-mail</label><input id="login-email" type="email" required autocomplete="username"></div>
-      <div class="field"><label>Senha</label><input id="login-senha" type="password" required autocomplete="current-password"></div>
-      <button type="submit" class="btn btn-primary">Entrar</button>
-      <div class="login-error" id="login-error">E-mail ou senha inválidos.</div>
-    </form>
-    <div class="dev-signature" style="margin-top:12px;">
-      Desenvolvido por Foster Engenharia & Construção<br>
-      <a href="https://wa.me/5524992096103" style="color:#E00000;font-size:11px;font-weight:700;">📲 Solicitar acesso</a>
-    </div>
-  </div>
-</div>
-
-<div class="app hidden" id="app-shell">
-  <div class="sidebar">
-    <div class="brand">
-      <svg class="logo-mark logo-mark-sm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="none" stroke="var(--amber)" stroke-width="7"/>
-        <text x="50" y="67" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="46" fill="var(--amber)">L</text>
-      </svg>
-      <div class="display">LocaObra</div>
-      <div class="sub">Locação de Ferramentas</div>
-    </div>
-    <nav>
-      <button class="nav-btn active" data-view="dashboard"><span class="icon">▦</span><span class="label">Dashboard</span></button>
-      <button class="nav-btn" data-view="clientes"><span class="icon">◆</span><span class="label">Clientes</span></button>
-      <button class="nav-btn" data-view="ferramentas"><span class="icon">▣</span><span class="label">Ferramentas</span></button>
-      <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
-      <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
+    <nav aria-label="Principal">
+      <a class="lk" href="#recursos">Recursos</a>
+      <a class="lk" href="#planos">Planos</a>
+      <a class="lk" href="#duvidas">Dúvidas</a>
+      <a class="btn btn-ghost" href="app.html">Entrar</a>
     </nav>
-    <div class="sidebar-footer">
-      <button class="logout-btn" id="logout-btn">↩ Sair</button>
-      <div class="dev-signature dev-signature-sidebar">Foster Engenharia &amp; Construção</div>
+  </div>
+</header>
+<div class="hazard"></div>
+
+<main>
+<section class="hero" style="padding:0">
+  <div class="wrap">
+    <div>
+      <div class="selo" id="selo-fundador">Lançamento · <b>20 vagas</b> com preço de fundador</div>
+      <h1>Sua locadora de ferramentas <em>no controle</em>, até pelo celular</h1>
+      <p class="sub">Contrato em PDF com a sua marca, estoque que se atualiza sozinho e aviso de devolução atrasada com a multa já calculada. Chega de caderno e planilha.</p>
+      <div class="ctas">
+        <a class="btn btn-red" href="app.html#cadastro">Testar grátis por 30 dias</a>
+        <a class="btn btn-ghost" href="#como-funciona">Como funciona</a>
+      </div>
+      <small>Sem cartão de crédito. Sua conta fica pronta em 2 minutos.</small>
+    </div>
+    <div class="vitrine">
+      <div class="browser">
+        <div class="barra" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="img/tela-dashboard.webp" width="1400" height="875" alt="Painel do LocaObra mostrando locações ativas, devoluções atrasadas, itens disponíveis e faturamento do mês">
+      </div>
+      <div class="fone"><img src="img/tela-celular.webp" width="600" height="1200" alt="LocaObra aberto no celular" loading="lazy"></div>
     </div>
   </div>
+</section>
 
-  <div class="main">
-    <div class="hazard"></div>
-    <div class="topbar">
-      <h1 id="page-title">Dashboard</h1>
-      <button type="button" class="topbar-logout" onclick="document.getElementById('logout-btn').click()">↩ Sair</button>
-    </div>
-    <div class="content" id="content"></div>
+<div class="dores">
+  <div class="wrap">
+    <div class="dor"><div class="x">Ferramenta que sai e ninguém sabe com quem está</div><div class="v">Cada item com cliente, data de saída e devolução.</div></div>
+    <div class="dor"><div class="x">Contrato escrito à mão, recibo no talão</div><div class="v">Contrato, recibo e termos em PDF em um clique.</div></div>
+    <div class="dor"><div class="x">Atraso que vira prejuízo sem cobrança</div><div class="v">Atrasos em destaque e multa calculada na devolução.</div></div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<section id="recursos">
+  <div class="wrap">
+    <div class="tit">
+      <div class="k">Recursos</div>
+      <h2>Tudo que a locadora usa no dia a dia</h2>
+      <p>Feito para locadoras de ferramentas, andaimes e equipamentos de obra. Simples o bastante para usar no balcão e no celular.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div><h3>Documentos em PDF</h3><p>Contrato, recibo e termos de retirada e devolução com o logo, as cores e os dados da sua locadora.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></div><h3>Estoque automático</h3><p>Baixa na saída, volta na devolução. O sistema não deixa alugar o que não está na prateleira.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Atrasos e multa</h3><p>Devoluções atrasadas aparecem no painel e a multa por dia de atraso é calculada na hora de devolver.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg></div><h3>Lembrete por WhatsApp</h3><p>Um toque e a mensagem de devolução já vai pronta para o cliente, com as ferramentas e a data de devolução.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><h3>Cadastro rápido</h3><p>Lista com os equipamentos mais comuns de obra. Marque o que você tem e cadastre tudo de uma vez.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 5a3 3 0 0 1 0 6M21.5 20a5.5 5.5 0 0 0-3.5-5"/></svg></div><h3>Equipe com permissão</h3><p>Dono como administrador e funcionários como operadores. Cada um com seu login e senha.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="dest">
+      <div class="txt">
+        <div class="tit" style="margin-bottom:0"><div class="k">Sua marca</div></div>
+        <h2>Contrato pronto para assinar, com a cara da sua empresa</h2>
+        <p>Ao fechar a locação, o contrato sai numerado e preenchido com cliente, itens, datas e valores.</p>
+        <ul>
+          <li>Logo e cor da sua locadora no cabeçalho</li>
+          <li>Numeração automática (0001/26, 0002/26…)</li>
+          <li>QR Code que abre o WhatsApp da sua loja</li>
+          <li>Recibo e termos de retirada e devolução</li>
+        </ul>
+      </div>
+      <div class="img pdf"><img src="img/contrato.webp" width="700" height="990" alt="Exemplo de contrato de locação gerado pelo LocaObra" loading="lazy"></div>
+    </div>
+    <div class="dest inv">
+      <div class="txt">
+        <div class="tit" style="margin-bottom:0"><div class="k">Começo rápido</div></div>
+        <h2>Seu estoque cadastrado no primeiro dia</h2>
+        <p>Betoneira, martelete, andaime, escora, compactador… Marque o que você tem, ajuste os valores e pronto.</p>
+        <ul>
+          <li>Valores de diária, semana e mês</li>
+          <li>Código único para cada ferramenta</li>
+          <li>Busca por nome ou código</li>
+        </ul>
+      </div>
+      <div class="img"><img src="img/tela-ferramentas.webp" width="1400" height="628" alt="Tela de cadastro rápido de ferramentas do LocaObra" loading="lazy"></div>
+    </div>
+  </div>
+</section>
+
+<section class="escuro" id="como-funciona">
+  <div class="wrap">
+    <div class="tit">
+      <div class="k">Como funciona</div>
+      <h2>Do cadastro à primeira locação em minutos</h2>
+      <p>Não precisa instalar nada. Funciona no navegador do computador e do celular.</p>
+    </div>
+    <div class="passos">
+      <div class="passo"><h3>Crie sua conta</h3><p>Nome da locadora, WhatsApp e e-mail. Você entra direto no sistema, com 30 dias grátis.</p></div>
+      <div class="passo"><h3>Coloque sua marca e estoque</h3><p>Envie o logo, escolha a cor e cadastre as ferramentas pela lista rápida.</p></div>
+      <div class="passo"><h3>Alugue e acompanhe</h3><p>Registre a locação, imprima o contrato e veja no painel o que está na rua e o que atrasou.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="planos">
+  <div class="wrap">
+    <div class="tit">
+      <div class="k">Planos</div>
+      <h2>Preço de lançamento</h2>
+      <p>30 dias grátis em qualquer plano. Você só escolhe o plano se quiser continuar.</p>
+    </div>
+    <div class="toggle" role="group" aria-label="Forma de cobrança">
+      <button type="button" data-ciclo="mensal">Mensal</button>
+      <button type="button" data-ciclo="anual" class="on">Anual <span class="eco">−20%</span></button>
+    </div>
+    <div class="fundador" id="fundador">
+      <div class="n" id="vagas">20</div>
+      <div><b>vagas de preço de fundador.</b> As primeiras locadoras que assinarem ficam com o valor travado por 12 meses.</div>
+    </div>
+    <div class="planos">
+      <div class="plano">
+        <h3>Essencial</h3>
+        <div class="us">Até <span data-us="essencial">2</span> usuários</div>
+        <div class="preco"><span data-preco="essencial">R$ 39,90</span><small>/mês</small></div>
+        <div class="obs" data-obs="essencial">R$ 478,80 cobrados uma vez por ano</div>
+        <ul>
+          <li>Locações, clientes e ferramentas ilimitados</li>
+          <li>Contrato, recibo e termos em PDF com sua marca</li>
+          <li>Controle de atrasos e multa</li>
+          <li>Lembrete de devolução por WhatsApp</li>
+        </ul>
+        <a class="btn btn-out" href="app.html#cadastro">Testar grátis</a>
+      </div>
+      <div class="plano pro">
+        <span class="tag">Mais completo</span>
+        <h3>Profissional</h3>
+        <div class="us">Até <span data-us="profissional">5</span> usuários</div>
+        <div class="preco"><span data-preco="profissional">R$ 69,90</span><small>/mês</small></div>
+        <div class="obs" data-obs="profissional">R$ 838,80 cobrados uma vez por ano</div>
+        <ul>
+          <li>Tudo do Essencial</li>
+          <li>Equipe maior, com administrador e operadores</li>
+          <li>Novos recursos primeiro (cobrança Pix ao cliente)</li>
+        </ul>
+        <a class="btn btn-red" href="app.html#cadastro">Testar grátis</a>
+      </div>
+    </div>
+    <p class="nota-planos">Pagamento por Pix, boleto ou cartão. Sem fidelidade: cancele quando quiser, direto no sistema.</p>
+  </div>
+</section>
+
+<section id="duvidas" style="padding-top:0">
+  <div class="wrap">
+    <div class="tit"><div class="k">Dúvidas</div><h2>Perguntas frequentes</h2></div>
+    <div class="faq">
+      <details><summary>Preciso de cartão de crédito para testar?</summary><p>Não. Você cria a conta e usa tudo por 30 dias sem informar nenhum dado de pagamento. Se quiser continuar, escolhe um plano dentro do sistema.</p></details>
+      <details><summary>Tenho que instalar algum programa?</summary><p>Não. O LocaObra funciona no navegador do computador, do tablet e do celular. É só entrar com seu e-mail e senha.</p></details>
+      <details><summary>O que acontece quando o teste acaba?</summary><p>Se não assinar, a conta fica em modo de consulta: você continua vendo seus dados, mas não cadastra novas locações até escolher um plano. Nada é apagado.</p></details>
+      <details><summary>Meus dados ficam separados das outras locadoras?</summary><p>Sim. Cada locadora tem a sua conta e só enxerga os próprios clientes, ferramentas e contratos. As senhas são protegidas com criptografia.</p></details>
+      <details><summary>Consigo tirar meus dados do sistema?</summary><p>Sim. O botão "Backup dos dados" baixa uma cópia completa a qualquer momento.</p></details>
+      <details><summary>Posso colocar o logo da minha empresa?</summary><p>Pode. Em "Minha empresa" você envia o logo e escolhe a cor. Eles aparecem no sistema e em todos os documentos em PDF.</p></details>
+      <details><summary>O contrato do sistema tem validade jurídica?</summary><p>O LocaObra gera um modelo de contrato com cláusulas gerais de locação. Recomendamos que você revise o texto com o seu advogado ou contador para adequar à realidade da sua locadora.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Teste o LocaObra na sua locadora</h2>
+    <p>30 dias grátis, sem cartão. Se não servir, é só não assinar.</p>
+    <a class="btn btn-dark" href="app.html#cadastro">Criar minha conta grátis</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="disp" style="color:#fff;font-size:18px">Loca<span style="color:var(--red)">Obra</span></div>
+      <div>Um produto Foster Tech Soluções</div>
+      <div class="ass">Wilson Foster · Engenheiro Civil · CREA/SP</div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <a href="app.html">Entrar</a>
+      <a href="app.html#cadastro">Criar conta</a>
+      <a href="https://wa.me/5524992096103?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20LocaObra." target="_blank" rel="noopener">WhatsApp</a>
+      <a href="mailto:comercial@fosterconstrucoes.com.br">comercial@fosterconstrucoes.com.br</a>
+    </div>
+  </div>
+</footer>
+
+<a class="zap" href="https://wa.me/5524992096103?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20LocaObra." target="_blank" rel="noopener" aria-label="Falar pelo WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 2.5 1 3 .8 3.6.8.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>
+</a>
 
 <script>
-/* ======================================================
-   CONFIGURAÇÃO SUPABASE — troque pelos dados do seu projeto
-   ====================================================== */
-/* ======================================================
-   PROTEÇÃO CONTRA TELA EM BRANCO
-   ====================================================== */
-window.addEventListener('error', function(e){
-  console.error('Erro capturado:', e.error || e.message);
-  const shell = document.getElementById('app-shell');
-  const login = document.getElementById('login-screen');
-  if(shell && shell.classList.contains('hidden') && login && login.classList.contains('hidden')){
-    login.classList.remove('hidden');
-    const errBox = document.getElementById('login-error');
-    if(errBox){
-      errBox.textContent = 'Ocorreu um erro ao carregar o app: ' + (e.message || 'erro desconhecido') + '. Veja o console (F12) para detalhes.';
-      errBox.style.display = 'block';
-    }
-  }
-});
-
-const SUPABASE_URL = 'https://chpdgbbteqvtfmkhsnlt.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_20ISJkbvcQWeoYxBXXsCqg_EhHwHBEs';
-let supabaseClient = null;
-let supaOk = false;
-try{
-  if(!SUPABASE_URL.includes('SEU-PROJETO')){
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    supaOk = true;
-  }
-}catch(e){ console.error(e); }
-
-/* ---- estado local (fallback demo se Supabase não configurado) ---- */
-let DB = {
-  clientes: [],
-  ferramentas: [],
-  locacoes: [],
-  itens_locacao: [],
-  pagamentos: []
-};
-
-const EMPRESA = {
-  nome: 'Foster Engenharia & Construção',
-  cnpj: '',
-  telefone: '(11) 93959-1627',
-  email: 'comercial@fosterconstrucoes.com.br',
-  endereco: 'Santana de Parnaíba, SP'
-};
-
-function toast(msg, ok=true){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.borderLeftColor = ok ? 'var(--amber)' : 'var(--red)';
-  t.style.display = 'block';
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(()=> t.style.display='none', 2600);
-}
-
-function fmtMoney(v){ return 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
-function fmtDate(d){ if(!d) return '-'; const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('pt-BR'); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function uid(){ return 'id-'+Math.random().toString(36).slice(2,10); }
-
-/* ======================================================
-   CARREGAMENTO DE DADOS
-   ====================================================== */
-async function loadAll(){
-  if(supaOk){
-    try{
-      const [c,f,l,i,p] = await Promise.all([
-        supabaseClient.from('clientes').select('*').order('criado_em',{ascending:false}),
-        supabaseClient.from('ferramentas').select('*').order('criado_em',{ascending:false}),
-        supabaseClient.from('locacoes').select('*').order('criado_em',{ascending:false}),
-        supabaseClient.from('itens_locacao').select('*'),
-        supabaseClient.from('pagamentos').select('*')
-      ]);
-      DB.clientes = c.data || [];
-      DB.ferramentas = f.data || [];
-      DB.locacoes = l.data || [];
-      DB.itens_locacao = i.data || [];
-      DB.pagamentos = p.data || [];
-    }catch(e){ console.error(e); toast('Erro ao carregar do Supabase — usando modo local', false); }
-  }
-}
-
-/* ======================================================
-   NAVEGAÇÃO
-   ====================================================== */
-const titles = {
-  dashboard:'Dashboard', clientes:'Clientes', ferramentas:'Ferramentas',
-  'nova-locacao':'Nova Locação', locacoes:'Locações'
-};
-document.querySelectorAll('.nav-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const view = btn.dataset.view;
-    document.getElementById('page-title').textContent = titles[view];
-    render(view);
-  });
-});
-
-/* No celular as tabelas viram cartões: cada célula recebe o nome da coluna */
-function rotularTabelas(root){
-  root.querySelectorAll('table').forEach(t=>{
-    const cab = Array.from(t.querySelectorAll('thead th')).map(th=>th.textContent.trim());
-    t.querySelectorAll('tbody tr').forEach(tr=>{
-      Array.from(tr.children).forEach((td,i)=>{
-        if(!td.hasAttribute('data-label')) td.setAttribute('data-label', cab[i] || '');
-      });
-    });
-  });
-}
 (function(){
-  const c = document.getElementById('content');
-  if(c) new MutationObserver(()=>rotularTabelas(c)).observe(c,{childList:true, subtree:true});
+  var API = 'https://locaobra-worker.fosterconstrutora.workers.dev';
+  var P = { essencial:{usuarios:2,mensal:49.90,anual:478.80}, profissional:{usuarios:5,mensal:89.90,anual:838.80} };
+  var ciclo = 'anual';
+  var brl = function(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+  function pinta(){
+    Object.keys(P).forEach(function(id){
+      var p = P[id];
+      var mes = ciclo === 'anual' ? p.anual/12 : p.mensal;
+      document.querySelector('[data-preco="'+id+'"]').textContent = brl(mes);
+      document.querySelector('[data-obs="'+id+'"]').textContent = ciclo === 'anual' ? brl(p.anual)+' cobrados uma vez por ano' : 'cobrado todo mês';
+      document.querySelector('[data-us="'+id+'"]').textContent = p.usuarios;
+    });
+    document.querySelectorAll('.toggle button').forEach(function(b){
+      var on = b.dataset.ciclo === ciclo; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+    });
+  }
+  document.querySelectorAll('.toggle button').forEach(function(b){
+    b.addEventListener('click', function(){ ciclo = b.dataset.ciclo; pinta(); });
+  });
+  pinta();
+  // valores e vagas ao vivo (se o servidor responder)
+  fetch(API + '/api/planos').then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.planos) d.planos.forEach(function(p){ if(P[p.id]) P[p.id] = {usuarios:p.usuarios, mensal:p.mensal, anual:p.anual}; });
+    pinta();
+    if(d && typeof d.vagas_fundador === 'number'){
+      var v = d.vagas_fundador;
+      if(v > 0){
+        document.getElementById('vagas').textContent = v;
+        document.getElementById('selo-fundador').innerHTML = 'Lançamento · <b>' + (v === 1 ? 'última vaga' : 'restam ' + v + ' vagas') + '</b> com preço de fundador';
+      } else {
+        document.getElementById('fundador').style.display = 'none';
+        document.getElementById('selo-fundador').innerHTML = 'Teste grátis por <b>30 dias</b>';
+      }
+    }
+  }).catch(function(){});
 })();
-
-async function render(view){
-  const el = document.getElementById('content');
-  el.innerHTML = '<div class="empty">Carregando…</div>';
-  await loadAll();
-  if(view === 'dashboard') renderDashboard(el);
-  else if(view === 'clientes') renderClientes(el);
-  else if(view === 'ferramentas') renderFerramentas(el);
-  else if(view === 'nova-locacao') renderNovaLocacao(el);
-  else if(view === 'locacoes') renderLocacoes(el);
-}
-
-/* ======================================================
-   CONFIG NOTE (se supabase não estiver configurado)
-   ====================================================== */
-function configNote(){
-  if(supaOk) return '';
-  return `<div class="config-note">⚠ Supabase ainda não configurado — edite <span class="mono">SUPABASE_URL</span> e <span class="mono">SUPABASE_ANON_KEY</span> no topo do arquivo. Rodando em modo demonstração (dados não são salvos).</div>`;
-}
-
-/* ======================================================
-   DASHBOARD
-   ====================================================== */
-function renderDashboard(el){
-  const ativas = DB.locacoes.filter(l=>l.status==='ativa');
-  const atrasadas = DB.locacoes.filter(l=> l.status==='ativa' && l.data_devolucao_prevista < todayISO());
-  const disponiveis = DB.ferramentas.reduce((s,f)=>s+(f.quantidade_disponivel||0),0);
-  const mesAtual = new Date().toISOString().slice(0,7);
-  const faturamentoMes = DB.pagamentos.filter(p=> (p.data_pagamento||'').slice(0,7)===mesAtual && p.tipo==='pagamento')
-    .reduce((s,p)=>s+Number(p.valor||0),0);
-
-  el.innerHTML = `
-    ${configNote()}
-    <div class="grid grid-4" style="margin-bottom:20px;">
-      <div class="stat"><div class="num mono">${ativas.length}</div><div class="lbl">Locações ativas</div></div>
-      <div class="stat warn"><div class="num mono">${atrasadas.length}</div><div class="lbl">Devoluções atrasadas</div></div>
-      <div class="stat ok"><div class="num mono">${disponiveis}</div><div class="lbl">Itens disponíveis</div></div>
-      <div class="stat"><div class="num mono">${fmtMoney(faturamentoMes)}</div><div class="lbl">Faturamento do mês</div></div>
-    </div>
-    <div class="panel">
-      <h2>Locações em andamento</h2>
-      ${ativas.length ? tableLocacoes(ativas) : `<div class="empty"><div class="display">Nenhuma locação ativa</div>Comece criando uma nova locação.</div>`}
-    </div>
-  `;
-}
-
-function tableLocacoes(list){
-  return `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Retirada</th><th>Devolução prevista</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody>
-    ${list.map(l=>{
-      const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
-      const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
-      const badge = atrasada ? '<span class="badge badge-bad">Atrasada</span>' :
-        l.status==='devolvida' ? '<span class="badge badge-neutral">Devolvida</span>' :
-        l.status==='cancelada' ? '<span class="badge badge-neutral">Cancelada</span>' :
-        '<span class="badge badge-ok">Ativa</span>';
-      return `<tr>
-        <td class="mono">#${l.numero||'-'}</td>
-        <td>${cliente ? cliente.nome : '—'}</td>
-        <td>${fmtDate(l.data_retirada)}</td>
-        <td>${fmtDate(l.data_devolucao_prevista)}</td>
-        <td class="mono">${fmtMoney(l.valor_total)}</td>
-        <td>${badge}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="verLocacao('${l.id}')">Ver</button></td>
-      </tr>`;
-    }).join('')}
-  </tbody></table>`;
-}
-
-/* ======================================================
-   CLIENTES
-   ====================================================== */
-function renderClientes(el){
-  el.innerHTML = `
-    ${configNote()}
-    <div class="grid grid-2">
-      <div class="panel">
-        <h2 id="form-cliente-titulo">Novo cliente</h2>
-        <form id="form-cliente">
-          <input type="hidden" id="cli-id" value="">
-          <div class="field"><label>Tipo</label>
-            <select id="cli-tipo"><option value="fisica">Pessoa física</option><option value="juridica">Pessoa jurídica</option></select>
-          </div>
-          <div class="field"><label>Nome / Razão social</label><input id="cli-nome" required></div>
-          <div class="field"><label>CPF / CNPJ</label><input id="cli-doc" required></div>
-          <div class="row">
-            <div class="field"><label>Telefone</label><input id="cli-tel" placeholder="(11) 99999-9999"></div>
-            <div class="field"><label>E-mail</label><input id="cli-email" type="email"></div>
-          </div>
-          <div class="field"><label>Endereço</label><input id="cli-end"></div>
-          <div class="field"><label>Status</label>
-            <select id="cli-status"><option value="ativo">Ativo</option><option value="inadimplente">Inadimplente</option><option value="bloqueado">Bloqueado</option></select>
-          </div>
-          <div class="field"><label>Observações</label><textarea id="cli-obs" rows="2"></textarea></div>
-          <div style="display:flex; gap:10px;">
-            <button type="submit" class="btn btn-primary" id="cli-submit-btn">Cadastrar cliente</button>
-            <button type="button" class="btn btn-outline hidden" id="cli-cancel-btn" onclick="cancelarEdicaoCliente()">Cancelar edição</button>
-          </div>
-        </form>
-      </div>
-      <div class="panel">
-        <h2>Clientes cadastrados <span class="tag">${DB.clientes.length}</span></h2>
-        <div class="field"><input id="busca-cliente" placeholder="Buscar por nome ou documento..." oninput="filtrarClientes()"></div>
-        <div id="lista-clientes">${listaClientesHTML(DB.clientes)}</div>
-      </div>
-    </div>
-  `;
-  document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const id = document.getElementById('cli-id').value;
-    const dados = {
-      tipo_pessoa: document.getElementById('cli-tipo').value,
-      nome: document.getElementById('cli-nome').value,
-      documento: document.getElementById('cli-doc').value,
-      telefone: document.getElementById('cli-tel').value,
-      email: document.getElementById('cli-email').value,
-      endereco: document.getElementById('cli-end').value,
-      observacoes: document.getElementById('cli-obs').value,
-      status: document.getElementById('cli-status').value
-    };
-    if(id){
-      if(supaOk){
-        const {error} = await supabaseClient.from('clientes').update(dados).eq('id', id);
-        if(error){ toast('Erro ao atualizar cliente', false); console.error(error); return; }
-      } else {
-        const c = DB.clientes.find(x=>x.id===id);
-        Object.assign(c, dados);
-      }
-      toast('Cliente atualizado');
-    } else {
-      if(supaOk){
-        const {error} = await supabaseClient.from('clientes').insert(dados);
-        if(error){ toast('Erro ao salvar cliente', false); console.error(error); return; }
-      } else {
-        dados.id = uid(); dados.criado_em = new Date().toISOString();
-        DB.clientes.unshift(dados);
-      }
-      toast('Cliente cadastrado com sucesso');
-    }
-    render('clientes');
-  });
-}
-
-function listaClientesHTML(list){
-  if(!list.length) return `<div class="empty"><div class="display">Nenhum cliente encontrado</div></div>`;
-  return `<table><thead><tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-    ${list.map(c=>`<tr><td>${c.nome}</td><td class="mono">${c.documento}</td><td>${c.telefone||'-'}</td>
-    <td><span class="badge ${c.status==='ativo'?'badge-ok':'badge-bad'}">${c.status}</span></td>
-    <td class="actions-cell">
-      <button class="btn btn-outline btn-sm" onclick="editarCliente('${c.id}')">Editar</button>
-      <button class="btn btn-danger btn-sm" onclick="excluirCliente('${c.id}')">Excluir</button>
-    </td></tr>`).join('')}
-    </tbody></table>`;
-}
-
-function filtrarClientes(){
-  const termo = document.getElementById('busca-cliente').value.toLowerCase();
-  const filtrados = DB.clientes.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento||'').toLowerCase().includes(termo));
-  document.getElementById('lista-clientes').innerHTML = listaClientesHTML(filtrados);
-}
-
-function editarCliente(id){
-  const c = DB.clientes.find(x=>x.id===id);
-  if(!c) return;
-  document.getElementById('cli-id').value = c.id;
-  document.getElementById('cli-tipo').value = c.tipo_pessoa || 'fisica';
-  document.getElementById('cli-nome').value = c.nome || '';
-  document.getElementById('cli-doc').value = c.documento || '';
-  document.getElementById('cli-tel').value = c.telefone || '';
-  document.getElementById('cli-email').value = c.email || '';
-  document.getElementById('cli-end').value = c.endereco || '';
-  document.getElementById('cli-status').value = c.status || 'ativo';
-  document.getElementById('cli-obs').value = c.observacoes || '';
-  document.getElementById('form-cliente-titulo').textContent = 'Editar cliente';
-  document.getElementById('cli-submit-btn').textContent = 'Salvar alterações';
-  document.getElementById('cli-cancel-btn').classList.remove('hidden');
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function cancelarEdicaoCliente(){ render('clientes'); }
-
-async function excluirCliente(id){
-  if(!confirm('Excluir este cliente? Essa ação não pode ser desfeita.')) return;
-  if(supaOk){
-    const {error} = await supabaseClient.from('clientes').delete().eq('id', id);
-    if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
-  } else {
-    DB.clientes = DB.clientes.filter(x=>x.id!==id);
-  }
-  toast('Cliente excluído');
-  render('clientes');
-}
-
-/* ======================================================
-   FERRAMENTAS
-   ====================================================== */
-/* ======================================================
-   FERRAMENTAS COMUNS — cadastro rápido
-   ====================================================== */
-const FERRAMENTAS_COMUNS = [
-  {nome:'Furadeira de impacto', categoria:'Elétrica', valor_diaria:25},
-  {nome:'Parafusadeira/Furadeira a bateria', categoria:'Elétrica', valor_diaria:30},
-  {nome:'Esmerilhadeira (lixadeira angular)', categoria:'Elétrica', valor_diaria:25},
-  {nome:'Serra circular', categoria:'Elétrica', valor_diaria:35},
-  {nome:'Serra mármore', categoria:'Elétrica', valor_diaria:35},
-  {nome:'Martelete rompedor', categoria:'Elétrica', valor_diaria:60},
-  {nome:'Betoneira 400L', categoria:'Concretagem', valor_diaria:80},
-  {nome:'Vibrador de concreto', categoria:'Concretagem', valor_diaria:50},
-  {nome:'Compactador de solo (soquete)', categoria:'Compactação', valor_diaria:90},
-  {nome:'Placa vibratória', categoria:'Compactação', valor_diaria:85},
-  {nome:'Andaime tubular (torre)', categoria:'Acesso', valor_diaria:40},
-  {nome:'Escora metálica', categoria:'Acesso', valor_diaria:8},
-  {nome:'Gerador de energia', categoria:'Energia', valor_diaria:100},
-  {nome:'Compressor de ar', categoria:'Energia', valor_diaria:70},
-  {nome:'Nível a laser', categoria:'Medição', valor_diaria:45},
-  {nome:'Roçadeira', categoria:'Jardinagem', valor_diaria:40},
-  {nome:'Carrinho de mão', categoria:'Manual', valor_diaria:10},
-  {nome:'Bomba submersa', categoria:'Hidráulica', valor_diaria:35}
-];
-
-async function cadastrarComuns(){
-  const marcados = Array.from(document.querySelectorAll('.chk-comum:checked')).map(el=>Number(el.dataset.idx));
-  if(!marcados.length){ toast('Selecione ao menos uma ferramenta', false); return; }
-  let proximoNumero = DB.ferramentas.length + 1;
-  const novos = marcados.map(idx=>{
-    const f = FERRAMENTAS_COMUNS[idx];
-    const codigo = `FER-${String(proximoNumero++).padStart(3,'0')}`;
-    return {
-      codigo, nome: f.nome, categoria: f.categoria,
-      valor_diaria: f.valor_diaria, valor_semanal: null, valor_mensal: null, valor_reposicao: null,
-      quantidade_total: 1, quantidade_disponivel: 1, status: 'disponivel'
-    };
-  });
-  if(supaOk){
-    const {error} = await supabaseClient.from('ferramentas').insert(novos);
-    if(error){ toast('Erro ao cadastrar em lote', false); console.error(error); return; }
-  } else {
-    novos.forEach(n=>{ n.id = uid(); n.criado_em = new Date().toISOString(); DB.ferramentas.unshift(n); });
-  }
-  toast(`${novos.length} ferramenta(s) cadastrada(s)`);
-  render('ferramentas');
-}
-
-function renderFerramentas(el){
-  el.innerHTML = `
-    ${configNote()}
-    <div class="panel">
-      <h2>Cadastro rápido <span class="tag">itens comuns</span></h2>
-      <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Marque as ferramentas que você já tem e cadastre todas de uma vez, com valores sugeridos (edite depois se quiser).</div>
-      <div id="lista-comuns" class="grid grid-4" style="gap:8px; margin-bottom:14px;">
-        ${FERRAMENTAS_COMUNS.map((f,idx)=>`
-          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; background:#F7F5F0; border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; cursor:pointer;">
-            <input type="checkbox" class="chk-comum" data-idx="${idx}" style="width:auto;">
-            ${f.nome}
-          </label>
-        `).join('')}
-      </div>
-      <button class="btn btn-dark btn-sm" onclick="cadastrarComuns()">Cadastrar selecionadas</button>
-    </div>
-    <div class="grid grid-2">
-      <div class="panel">
-        <h2 id="form-ferramenta-titulo">Nova ferramenta / equipamento</h2>
-        <form id="form-ferramenta">
-          <input type="hidden" id="fer-id" value="">
-          <div class="row">
-            <div class="field"><label>Código</label><input id="fer-cod" placeholder="FER-001" required></div>
-            <div class="field"><label>Categoria</label><input id="fer-cat" placeholder="Elétrica, manual, andaime..."></div>
-          </div>
-          <div class="field"><label>Nome</label><input id="fer-nome" placeholder="Furadeira de impacto Bosch" required></div>
-          <div class="row">
-            <div class="field"><label>Valor diária (R$)</label><input id="fer-diaria" type="number" step="0.01" required></div>
-            <div class="field"><label>Valor semanal (R$) — opcional</label><input id="fer-semanal" type="number" step="0.01"></div>
-            <div class="field"><label>Valor mensal (R$) — opcional</label><input id="fer-mensal" type="number" step="0.01"></div>
-          </div>
-          <div class="row">
-            <div class="field"><label>Valor de reposição (R$)</label><input id="fer-reposicao" type="number" step="0.01"></div>
-            <div class="field"><label>Quantidade em estoque</label><input id="fer-qtd" type="number" value="1" min="1" required></div>
-          </div>
-          <div class="field"><label>Status</label>
-            <select id="fer-status"><option value="disponivel">Disponível</option><option value="manutencao">Em manutenção</option><option value="inativo">Inativo</option></select>
-          </div>
-          <div style="display:flex; gap:10px;">
-            <button type="submit" class="btn btn-primary" id="fer-submit-btn">Cadastrar ferramenta</button>
-            <button type="button" class="btn btn-outline hidden" id="fer-cancel-btn" onclick="cancelarEdicaoFerramenta()">Cancelar edição</button>
-          </div>
-        </form>
-      </div>
-      <div class="panel">
-        <h2>Estoque <span class="tag">${DB.ferramentas.length}</span></h2>
-        <div class="field"><input id="busca-ferramenta" placeholder="Buscar por nome ou código..." oninput="filtrarFerramentas()"></div>
-        <div id="lista-ferramentas">${listaFerramentasHTML(DB.ferramentas)}</div>
-      </div>
-    </div>
-  `;
-  document.getElementById('form-ferramenta').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const id = document.getElementById('fer-id').value;
-    const qtd = Number(document.getElementById('fer-qtd').value);
-    const dados = {
-      codigo: document.getElementById('fer-cod').value,
-      categoria: document.getElementById('fer-cat').value,
-      nome: document.getElementById('fer-nome').value,
-      valor_diaria: Number(document.getElementById('fer-diaria').value),
-      valor_semanal: document.getElementById('fer-semanal').value ? Number(document.getElementById('fer-semanal').value) : null,
-      valor_mensal: document.getElementById('fer-mensal').value ? Number(document.getElementById('fer-mensal').value) : null,
-      valor_reposicao: document.getElementById('fer-reposicao').value ? Number(document.getElementById('fer-reposicao').value) : null,
-      status: document.getElementById('fer-status').value
-    };
-    if(id){
-      const atual = DB.ferramentas.find(x=>x.id===id);
-      const delta = qtd - atual.quantidade_total;
-      dados.quantidade_total = qtd;
-      dados.quantidade_disponivel = Math.max(0, atual.quantidade_disponivel + delta);
-      if(supaOk){
-        const {error} = await supabaseClient.from('ferramentas').update(dados).eq('id', id);
-        if(error){ toast('Erro ao atualizar ferramenta', false); console.error(error); return; }
-      } else {
-        Object.assign(atual, dados);
-      }
-      toast('Ferramenta atualizada');
-    } else {
-      dados.quantidade_total = qtd;
-      dados.quantidade_disponivel = qtd;
-      if(supaOk){
-        const {error} = await supabaseClient.from('ferramentas').insert(dados);
-        if(error){ toast('Erro ao salvar ferramenta', false); console.error(error); return; }
-      } else {
-        dados.id = uid(); dados.criado_em = new Date().toISOString();
-        DB.ferramentas.unshift(dados);
-      }
-      toast('Ferramenta cadastrada com sucesso');
-    }
-    render('ferramentas');
-  });
-}
-
-function listaFerramentasHTML(list){
-  if(!list.length) return `<div class="empty"><div class="display">Nenhuma ferramenta encontrada</div></div>`;
-  return `<table><thead><tr><th>Código</th><th>Nome</th><th>Diária</th><th>Disponível</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-    ${list.map(f=>`<tr><td class="mono">${f.codigo}</td><td>${f.nome}</td><td class="mono">${fmtMoney(f.valor_diaria)}</td>
-    <td class="mono">${f.quantidade_disponivel}/${f.quantidade_total}</td>
-    <td><span class="badge ${f.status==='disponivel'?'badge-ok':f.status==='manutencao'?'badge-warn':'badge-neutral'}">${f.status}</span></td>
-    <td class="actions-cell">
-      <button class="btn btn-outline btn-sm" onclick="editarFerramenta('${f.id}')">Editar</button>
-      <button class="btn btn-danger btn-sm" onclick="excluirFerramenta('${f.id}')">Excluir</button>
-    </td></tr>`).join('')}
-    </tbody></table>`;
-}
-
-function filtrarFerramentas(){
-  const termo = document.getElementById('busca-ferramenta').value.toLowerCase();
-  const filtrados = DB.ferramentas.filter(f => f.nome.toLowerCase().includes(termo) || (f.codigo||'').toLowerCase().includes(termo));
-  document.getElementById('lista-ferramentas').innerHTML = listaFerramentasHTML(filtrados);
-}
-
-function editarFerramenta(id){
-  const f = DB.ferramentas.find(x=>x.id===id);
-  if(!f) return;
-  document.getElementById('fer-id').value = f.id;
-  document.getElementById('fer-cod').value = f.codigo || '';
-  document.getElementById('fer-cat').value = f.categoria || '';
-  document.getElementById('fer-nome').value = f.nome || '';
-  document.getElementById('fer-diaria').value = f.valor_diaria || '';
-  document.getElementById('fer-semanal').value = f.valor_semanal || '';
-  document.getElementById('fer-mensal').value = f.valor_mensal || '';
-  document.getElementById('fer-reposicao').value = f.valor_reposicao || '';
-  document.getElementById('fer-qtd').value = f.quantidade_total || 1;
-  document.getElementById('fer-status').value = f.status || 'disponivel';
-  document.getElementById('form-ferramenta-titulo').textContent = 'Editar ferramenta';
-  document.getElementById('fer-submit-btn').textContent = 'Salvar alterações';
-  document.getElementById('fer-cancel-btn').classList.remove('hidden');
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function cancelarEdicaoFerramenta(){ render('ferramentas'); }
-
-async function excluirFerramenta(id){
-  if(!confirm('Excluir esta ferramenta? Essa ação não pode ser desfeita.')) return;
-  if(supaOk){
-    const {error} = await supabaseClient.from('ferramentas').delete().eq('id', id);
-    if(error){ toast('Não foi possível excluir (talvez tenha locações vinculadas)', false); console.error(error); return; }
-  } else {
-    DB.ferramentas = DB.ferramentas.filter(x=>x.id!==id);
-  }
-  toast('Ferramenta excluída');
-  render('ferramentas');
-}
-
-/* ======================================================
-   NOVA LOCAÇÃO
-   ====================================================== */
-let carrinho = []; // {ferramenta_id, quantidade}
-
-function renderNovaLocacao(el){
-  carrinho = [];
-  const clientesOptions = DB.clientes.map(c=>`<option value="${c.id}">${c.nome} — ${c.documento}</option>`).join('');
-  const ferramentasOptions = DB.ferramentas.filter(f=>f.quantidade_disponivel>0).map(f=>`<option value="${f.id}">${f.nome} (${f.codigo}) — disp: ${f.quantidade_disponivel}</option>`).join('');
-
-  el.innerHTML = `
-    ${configNote()}
-    <div class="panel">
-      <h2>1. Cliente e período</h2>
-      <div class="row">
-        <div class="field"><label>Cliente</label><select id="loc-cliente">${clientesOptions || '<option value="">Cadastre um cliente primeiro</option>'}</select></div>
-        <div class="field"><label>Tipo de cobrança</label>
-          <select id="loc-tipo">
-            <option value="diaria">Diária</option>
-            <option value="semanal">Semanal</option>
-            <option value="mensal">Mensal</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Data de retirada</label><input id="loc-retirada" type="date" value="${todayISO()}"></div>
-        <div class="field"><label>Data de devolução prevista</label><input id="loc-devolucao" type="date"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>2. Ferramentas</h2>
-      <div class="item-row">
-        <select id="add-ferramenta">${ferramentasOptions || '<option value="">Nenhuma ferramenta disponível</option>'}</select>
-        <input id="add-qtd" type="number" class="qty" value="1" min="1">
-        <button class="btn btn-dark btn-sm" onclick="adicionarItem()">Adicionar</button>
-      </div>
-      <div id="carrinho-list"></div>
-    </div>
-
-    <div class="panel">
-      <h2>3. Caução (opcional)</h2>
-      <div class="field"><label>Valor de caução (R$)</label><input id="loc-caucao" type="number" step="0.01" value="0"></div>
-    </div>
-
-    <div id="resumo"></div>
-  `;
-
-  document.getElementById('loc-tipo').addEventListener('change', calcularResumo);
-  document.getElementById('loc-devolucao').addEventListener('change', calcularResumo);
-  document.getElementById('loc-retirada').addEventListener('change', calcularResumo);
-  document.getElementById('loc-caucao').addEventListener('input', calcularResumo);
-
-  // sugerir devolução +1 dia por padrão
-  const dev = document.getElementById('loc-devolucao');
-  const t = new Date(); t.setDate(t.getDate()+1);
-  dev.value = t.toISOString().slice(0,10);
-
-  calcularResumo();
-}
-
-function adicionarItem(){
-  const sel = document.getElementById('add-ferramenta');
-  const qtd = Number(document.getElementById('add-qtd').value);
-  if(!sel.value){ toast('Selecione uma ferramenta', false); return; }
-  const existente = carrinho.find(i=>i.ferramenta_id===sel.value);
-  if(existente){ existente.quantidade += qtd; }
-  else { carrinho.push({ferramenta_id: sel.value, quantidade: qtd}); }
-  renderCarrinho();
-  calcularResumo();
-}
-
-function removerItem(fid){
-  carrinho = carrinho.filter(i=>i.ferramenta_id!==fid);
-  renderCarrinho();
-  calcularResumo();
-}
-
-function renderCarrinho(){
-  const box = document.getElementById('carrinho-list');
-  if(!carrinho.length){ box.innerHTML = '<div class="empty" style="padding:16px;">Nenhuma ferramenta adicionada ainda</div>'; return; }
-  box.innerHTML = `<table><thead><tr><th>Ferramenta</th><th>Qtd</th><th></th></tr></thead><tbody>
-    ${carrinho.map(i=>{
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      return `<tr><td>${f?f.nome:'?'}</td><td class="mono">${i.quantidade}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="removerItem('${i.ferramenta_id}')">Remover</button></td></tr>`;
-    }).join('')}
-  </tbody></table>`;
-}
-
-function calcularPeriodo(){
-  const r = document.getElementById('loc-retirada').value;
-  const d = document.getElementById('loc-devolucao').value;
-  if(!r || !d) return {dias:0};
-  const dias = Math.max(1, Math.round((new Date(d) - new Date(r)) / 86400000));
-  return {dias};
-}
-
-function calcularItemValor(f, tipo, dias){
-  if(!f) return 0;
-  if(tipo==='diaria') return f.valor_diaria * dias;
-  if(tipo==='semanal'){
-    const semanas = Math.ceil(dias/7);
-    const vSemana = f.valor_semanal || (f.valor_diaria*5);
-    return vSemana * semanas;
-  }
-  if(tipo==='mensal'){
-    const meses = Math.ceil(dias/30);
-    const vMes = f.valor_mensal || (f.valor_diaria*22);
-    return vMes * meses;
-  }
-  return 0;
-}
-
-function calcularResumo(){
-  const box = document.getElementById('resumo');
-  if(!box) return;
-  const tipo = document.getElementById('loc-tipo').value;
-  const {dias} = calcularPeriodo();
-  const caucao = Number(document.getElementById('loc-caucao').value || 0);
-
-  let total = 0;
-  const linhas = carrinho.map(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    const subtotal = calcularItemValor(f, tipo, dias) * i.quantidade;
-    total += subtotal;
-    return `<div class="row" style="font-size:13.5px; color:#C9CCD1;"><span>${f?f.nome:'?'} × ${i.quantidade}</span><span class="mono">${fmtMoney(subtotal)}</span></div>`;
-  }).join('');
-
-  box.innerHTML = `
-    <div class="summary-box">
-      <div style="font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:13px; color:#9CA0A8; margin-bottom:8px;">
-        Período: ${dias} dia(s) · Cobrança ${tipo}
-      </div>
-      ${linhas || '<div style="color:#9CA0A8; font-size:13.5px;">Adicione ferramentas acima</div>'}
-      <div class="row" style="margin-top:10px; border-top:1px solid #3A3D42; padding-top:10px;">
-        <span>Caução</span><span class="mono">${fmtMoney(caucao)}</span>
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <span style="font-family:'Oswald',sans-serif; text-transform:uppercase;">Total da locação</span>
-        <span class="total">${fmtMoney(total)}</span>
-      </div>
-    </div>
-    <div style="margin-top:16px; display:flex; gap:10px;">
-      <button class="btn btn-primary" onclick="salvarLocacao()">Confirmar locação</button>
-    </div>
-  `;
-  window._locTotal = total;
-}
-
-async function salvarLocacao(){
-  const clienteId = document.getElementById('loc-cliente').value;
-  if(!clienteId){ toast('Selecione um cliente', false); return; }
-  if(!carrinho.length){ toast('Adicione ao menos uma ferramenta', false); return; }
-
-  const tipo = document.getElementById('loc-tipo').value;
-  const retirada = document.getElementById('loc-retirada').value;
-  const devolucao = document.getElementById('loc-devolucao').value;
-  const caucao = Number(document.getElementById('loc-caucao').value || 0);
-  const {dias} = calcularPeriodo();
-
-  const locacaoObj = {
-    cliente_id: clienteId,
-    data_retirada: retirada,
-    data_devolucao_prevista: devolucao,
-    tipo_cobranca: tipo,
-    valor_total: window._locTotal || 0,
-    valor_caucao: caucao,
-    status: 'ativa'
-  };
-
-  let locacaoId, numero;
-  if(supaOk){
-    const {data, error} = await supabaseClient.from('locacoes').insert(locacaoObj).select().single();
-    if(error){ toast('Erro ao salvar locação', false); console.error(error); return; }
-    locacaoId = data.id; numero = data.numero;
-    const itens = carrinho.map(i=>{
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      const valorUnit = calcularItemValor(f, tipo, dias);
-      return {locacao_id: locacaoId, ferramenta_id: i.ferramenta_id, quantidade: i.quantidade, valor_unitario: valorUnit, subtotal: valorUnit*i.quantidade};
-    });
-    const {error:e2} = await supabaseClient.from('itens_locacao').insert(itens);
-    if(e2) console.error(e2);
-    if(caucao > 0){
-      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento:'a definir'});
-    }
-  } else {
-    locacaoId = uid(); numero = DB.locacoes.length + 1;
-    locacaoObj.id = locacaoId; locacaoObj.numero = numero; locacaoObj.criado_em = new Date().toISOString();
-    DB.locacoes.unshift(locacaoObj);
-    carrinho.forEach(i=>{
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      const valorUnit = calcularItemValor(f, tipo, dias);
-      DB.itens_locacao.push({id:uid(), locacao_id: locacaoId, ferramenta_id:i.ferramenta_id, quantidade:i.quantidade, valor_unitario:valorUnit, subtotal:valorUnit*i.quantidade});
-      f.quantidade_disponivel -= i.quantidade;
-    });
-  }
-
-  toast('Locação registrada! Gerando contrato...');
-  await loadAll();
-  const locFinal = supaOk ? DB.locacoes.find(l=>l.id===locacaoId) : locacaoObj;
-  gerarContratoPDF(locFinal);
-  document.querySelector('[data-view="locacoes"]').click();
-}
-
-/* ======================================================
-   LOCAÇÕES (lista + ações)
-   ====================================================== */
-function renderLocacoes(el){
-  el.innerHTML = `
-    ${configNote()}
-    <div class="panel">
-      <h2>Todas as locações <span class="tag">${DB.locacoes.length}</span></h2>
-      <div class="row" style="margin-bottom:14px;">
-        <div class="field" style="margin-bottom:0;"><input id="busca-locacao" placeholder="Buscar por cliente ou número..." oninput="filtrarLocacoes()"></div>
-        <div class="field" style="margin-bottom:0; max-width:200px;">
-          <select id="filtro-status-locacao" onchange="filtrarLocacoes()">
-            <option value="">Todos os status</option>
-            <option value="ativa">Ativas</option>
-            <option value="atrasada">Atrasadas</option>
-            <option value="devolvida">Devolvidas</option>
-            <option value="cancelada">Canceladas</option>
-          </select>
-        </div>
-      </div>
-      <div id="lista-locacoes">${DB.locacoes.length ? tableLocacoesCompleta(DB.locacoes) : `<div class="empty"><div class="display">Nenhuma locação registrada</div></div>`}</div>
-    </div>
-  `;
-}
-
-function filtrarLocacoes(){
-  const termo = document.getElementById('busca-locacao').value.toLowerCase();
-  const statusFiltro = document.getElementById('filtro-status-locacao').value;
-  const filtrados = DB.locacoes.filter(l=>{
-    const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
-    const nomeMatch = (cliente?.nome||'').toLowerCase().includes(termo) || String(l.numero||'').includes(termo);
-    const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
-    const statusReal = atrasada ? 'atrasada' : l.status;
-    const statusMatch = !statusFiltro || statusReal === statusFiltro;
-    return nomeMatch && statusMatch;
-  });
-  document.getElementById('lista-locacoes').innerHTML = filtrados.length ? tableLocacoesCompleta(filtrados) : `<div class="empty"><div class="display">Nenhuma locação encontrada</div></div>`;
-}
-
-function tableLocacoesCompleta(list){
-  return `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Retirada</th><th>Devolução prev.</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-    ${list.map(l=>{
-      const cliente = DB.clientes.find(c=>c.id===l.cliente_id);
-      const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
-      const badge = l.status==='devolvida' ? '<span class="badge badge-neutral">Devolvida</span>' :
-        atrasada ? '<span class="badge badge-bad">Atrasada</span>' :
-        l.status==='cancelada' ? '<span class="badge badge-neutral">Cancelada</span>' :
-        '<span class="badge badge-ok">Ativa</span>';
-      return `<tr>
-        <td class="mono">#${l.numero||'-'}</td>
-        <td>${cliente?cliente.nome:'—'}</td>
-        <td>${fmtDate(l.data_retirada)}</td>
-        <td>${fmtDate(l.data_devolucao_prevista)}</td>
-        <td class="mono">${fmtMoney(l.valor_total)}</td>
-        <td>${badge}</td>
-        <td class="actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Contrato</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Recibo</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'retirada')">Termo Retirada</button>
-          ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'devolucao')">Termo Devolução</button>` : ''}
-          ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
-          ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
-        </td>
-      </tr>`;
-    }).join('')}
-  </tbody></table>`;
-}
-
-function calcularMulta(locacaoId, diasAtraso){
-  if(diasAtraso <= 0) return 0;
-  const itens = DB.itens_locacao.filter(i=>i.locacao_id===locacaoId);
-  let multaDia = 0;
-  itens.forEach(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    if(f) multaDia += (f.valor_diaria || 0) * i.quantidade;
-  });
-  return multaDia * diasAtraso;
-}
-
-async function marcarDevolvida(id){
-  const hoje = todayISO();
-  const loc = DB.locacoes.find(x=>x.id===id);
-  const diasAtraso = loc ? Math.max(0, Math.round((new Date(hoje) - new Date(loc.data_devolucao_prevista)) / 86400000)) : 0;
-  const multa = calcularMulta(id, diasAtraso);
-
-  if(supaOk){
-    const {error} = await supabaseClient.from('locacoes').update({status:'devolvida', data_devolucao_real: hoje, valor_multa: multa}).eq('id', id);
-    if(error){ toast('Erro ao atualizar', false); return; }
-    // devolve estoque
-    const itens = DB.itens_locacao.filter(i=>i.locacao_id===id);
-    for(const i of itens){
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      if(f) await supabaseClient.from('ferramentas').update({quantidade_disponivel: f.quantidade_disponivel + i.quantidade}).eq('id', f.id);
-    }
-    if(multa > 0){
-      await supabaseClient.from('pagamentos').insert({locacao_id: id, tipo:'multa', valor: multa, observacoes: `Multa por ${diasAtraso} dia(s) de atraso`});
-    }
-  } else {
-    loc.status='devolvida'; loc.data_devolucao_real=hoje; loc.valor_multa=multa;
-    DB.itens_locacao.filter(i=>i.locacao_id===id).forEach(i=>{
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      if(f) f.quantidade_disponivel += i.quantidade;
-    });
-  }
-  toast(multa > 0 ? `Devolução registrada com multa de ${fmtMoney(multa)} (${diasAtraso} dia(s) de atraso)` : 'Devolução registrada, estoque atualizado');
-  render('locacoes');
-}
-
-function lembreteWhatsapp(id){
-  const loc = DB.locacoes.find(x=>x.id===id);
-  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id);
-  if(!cliente || !cliente.telefone){ toast('Cliente sem telefone cadastrado', false); return; }
-  const itens = DB.itens_locacao.filter(i=>i.locacao_id===id);
-  const nomesFerramentas = itens.map(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    return f ? f.nome : '';
-  }).filter(Boolean).join(', ');
-  const atrasada = loc.data_devolucao_prevista < todayISO();
-  const msg = atrasada
-    ? `Olá, ${cliente.nome}! A devolução de ${nomesFerramentas} estava prevista para ${fmtDate(loc.data_devolucao_prevista)} e consta em atraso. Poderia nos dar um retorno sobre a devolução? — ${EMPRESA.nome}`
-    : `Olá, ${cliente.nome}! Passando para lembrar que a devolução de ${nomesFerramentas} está prevista para ${fmtDate(loc.data_devolucao_prevista)}. Qualquer dúvida, estamos à disposição. — ${EMPRESA.nome}`;
-  const digitos = (cliente.telefone || '').replace(/\D/g, '');
-  const numeroCompleto = digitos.startsWith('55') ? digitos : `55${digitos}`;
-  window.open(`https://wa.me/${numeroCompleto}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-function verLocacao(id){
-  document.querySelector('[data-view="locacoes"]').click();
-}
-
-/* ======================================================
-   PAPEL TIMBRADO — cabeçalho e rodapé padrão de todos os PDFs
-   ====================================================== */
-function desenharCabecalhoPDF(doc, titulo, subtitulo){
-  // faixa vermelha no topo
-  doc.setFillColor(224, 0, 0);
-  doc.rect(0, 0, 210, 16, 'F');
-
-  // marca hexagonal simplificada + wordmark
-  doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
-  doc.setFillColor(224,0,0);
-  const cx=12, cy=8, r=5.2;
-  const pts=[];
-  for(let a=0;a<6;a++){ const ang=Math.PI/180*(60*a-90); pts.push([cx+r*Math.cos(ang), cy+r*Math.sin(ang)]); }
-  doc.setDrawColor(255,255,255);
-  for(let i=0;i<6;i++){ const [x1,y1]=pts[i]; const [x2,y2]=pts[(i+1)%6]; doc.line(x1,y1,x2,y2); }
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(7);
-  doc.text('L', cx, cy+2, {align:'center'});
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('LOCAOBRA', 21, 7);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text('Locação de Ferramentas', 21, 11.5);
-
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-  doc.text(EMPRESA.nome, 195, 6.5, {align:'right'});
-  doc.text(`${EMPRESA.telefone}  ·  ${EMPRESA.email}`, 195, 11, {align:'right'});
-
-  doc.setTextColor(0,0,0);
-  let y = 26;
-  doc.setFont('helvetica','bold'); doc.setFontSize(15);
-  doc.text(titulo, 105, y, {align:'center'}); y+=6;
-  if(subtitulo){
-    doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text(subtitulo, 105, y, {align:'center'}); y+=8;
-  } else {
-    y+=4;
-  }
-  return y;
-}
-
-function desenharRodapePDF(doc){
-  const pageCount = doc.internal.getNumberOfPages();
-  for(let i=1; i<=pageCount; i++){
-    doc.setPage(i);
-    doc.setDrawColor(220,220,220); doc.setLineWidth(0.2);
-    doc.line(15, 282, 195, 282);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-    doc.setTextColor(140,140,140);
-    doc.text('Desenvolvido por Foster Engenharia & Construção', 15, 288);
-    doc.text(`Página ${i} de ${pageCount}`, 195, 288, {align:'right'});
-    doc.setTextColor(0,0,0);
-  }
-}
-
-/* ======================================================
-   GERAÇÃO DE PDF — CONTRATO
-   ====================================================== */
-function gerarContratoPDF(loc){
-  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
-  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  let y = desenharCabecalhoPDF(doc, 'CONTRATO DE LOCAÇÃO DE FERRAMENTAS', `Contrato Nº ${loc.numero || '-'}`);
-
-  doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=6;
-  doc.setFont('helvetica','normal');
-  doc.text(`${EMPRESA.nome}`, 15, y); y+=5;
-  doc.text(`Contato: ${EMPRESA.telefone} | ${EMPRESA.email}`, 15, y); y+=5;
-  doc.text(`${EMPRESA.endereco}`, 15, y); y+=10;
-
-  doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=6;
-  doc.setFont('helvetica','normal');
-  doc.text(`Nome: ${cliente.nome || '-'}`, 15, y); y+=5;
-  doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=5;
-  doc.text(`Telefone: ${cliente.telefone || '-'}`, 15, y); y+=5;
-  doc.text(`Endereço: ${cliente.endereco || '-'}`, 15, y); y+=10;
-
-  doc.setFont('helvetica','bold'); doc.text('OBJETO DA LOCAÇÃO', 15, y); y+=6;
-  doc.setFont('helvetica','normal');
-  itens.forEach(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    doc.text(`• ${f?f.nome:'?'} (${f?f.codigo:''}) — Qtd: ${i.quantidade} — Subtotal: ${fmtMoney(i.subtotal)}`, 15, y);
-    y+=5;
-  });
-  y+=5;
-
-  doc.setFont('helvetica','bold'); doc.text('CONDIÇÕES', 15, y); y+=6;
-  doc.setFont('helvetica','normal');
-  const cond = [
-    `Data de retirada: ${fmtDate(loc.data_retirada)}`,
-    `Data prevista de devolução: ${fmtDate(loc.data_devolucao_prevista)}`,
-    `Tipo de cobrança: ${loc.tipo_cobranca}`,
-    `Valor total da locação: ${fmtMoney(loc.valor_total)}`,
-    `Valor de caução: ${fmtMoney(loc.valor_caucao)}`
-  ];
-  cond.forEach(c=>{ doc.text(c, 15, y); y+=5; });
-  y+=8;
-
-  doc.setFont('helvetica','bold'); doc.text('CLÁUSULAS GERAIS', 15, y); y+=6;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  const clausulas = [
-    '1. O LOCATÁRIO é responsável pela guarda, conservação e uso adequado do(s) equipamento(s) durante todo o período de locação.',
-    '2. Em caso de dano ou perda, o LOCATÁRIO se compromete a ressarcir a LOCADORA pelo valor de reposição do item.',
-    '3. A devolução fora do prazo previsto acarretará cobrança de diária adicional proporcional ao atraso, sem prejuízo de outras medidas cabíveis.',
-    '4. O(s) equipamento(s) deve(m) ser devolvido(s) em condições de uso, ressalvado o desgaste natural decorrente do uso regular.',
-    '5. O valor de caução, quando houver, será devolvido integralmente após a conferência do(s) equipamento(s) na devolução, descontadas eventuais multas ou danos.',
-    '6. Este contrato é regido pelas leis brasileiras, ficando eleito o foro da comarca da LOCADORA para dirimir eventuais controvérsias.'
-  ];
-  clausulas.forEach(c=>{
-    const lines = doc.splitTextToSize(c, 180);
-    doc.text(lines, 15, y); y += lines.length*4.5 + 2;
-  });
-
-  y+=15;
-  doc.setFontSize(10);
-  doc.text('_______________________________', 15, y);
-  doc.text('_______________________________', 115, y); y+=5;
-  doc.text('LOCADORA', 15, y);
-  doc.text('LOCATÁRIO', 115, y);
-
-  desenharRodapePDF(doc);
-  doc.save(`contrato-${loc.numero || 'novo'}.pdf`);
-  toast('Contrato PDF gerado');
-}
-
-/* ======================================================
-   GERAÇÃO DE PDF — RECIBO
-   ====================================================== */
-function gerarReciboPDF(loc){
-  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
-  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  let y = desenharCabecalhoPDF(doc, 'RECIBO', `Referente à Locação Nº ${loc.numero || '-'}`);
-
-  doc.setFontSize(11);
-  doc.text(`Recebemos de: ${cliente.nome || '-'}`, 15, y); y+=7;
-  doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=7;
-  doc.text(`A quantia de: ${fmtMoney(loc.valor_total)}`, 15, y); y+=10;
-
-  doc.setFont('helvetica','bold'); doc.text('Itens locados:', 15, y); y+=6;
-  doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  itens.forEach(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    doc.text(`• ${f?f.nome:'?'} (${f?f.codigo:''}) — Qtd: ${i.quantidade} — ${fmtMoney(i.subtotal)}`, 18, y);
-    y+=5.5;
-  });
-  y+=6;
-
-  doc.setFontSize(11);
-  doc.text(`Período: ${fmtDate(loc.data_retirada)} a ${fmtDate(loc.data_devolucao_prevista)} (cobrança ${loc.tipo_cobranca})`, 15, y); y+=7;
-  doc.text(`Caução recebida: ${fmtMoney(loc.valor_caucao)}`, 15, y);
-  if(loc.valor_multa > 0){ y+=7; doc.text(`Multa por atraso: ${fmtMoney(loc.valor_multa)}`, 15, y); }
-  y+=20;
-
-  doc.text(`Santana de Parnaíba, ${new Date().toLocaleDateString('pt-BR')}`, 15, y); y+=20;
-  doc.text('_______________________________', 15, y);
-  doc.text('_______________________________', 115, y); y+=5;
-  doc.setFontSize(9);
-  doc.text(EMPRESA.nome, 15, y);
-  doc.text(cliente.nome || 'Cliente', 115, y);
-
-  desenharRodapePDF(doc);
-  doc.save(`recibo-${loc.numero || 'novo'}.pdf`);
-  toast('Recibo PDF gerado');
-}
-
-/* ======================================================
-   TERMO DE RETIRADA / DEVOLUÇÃO (impressão para assinatura)
-   ====================================================== */
-function gerarTermoPDF(loc, tipo){
-  // tipo: 'retirada' ou 'devolucao'
-  const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
-  const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const titulo = tipo === 'retirada' ? 'TERMO DE RETIRADA DE FERRAMENTAS' : 'TERMO DE DEVOLUÇÃO DE FERRAMENTAS';
-  let y = desenharCabecalhoPDF(doc, titulo, `Locação Nº ${loc.numero || '-'}`);
-
-  doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=5.5;
-  doc.setFont('helvetica','normal');
-  doc.text(`${EMPRESA.nome} — ${EMPRESA.telefone}`, 15, y); y+=9;
-
-  doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=5.5;
-  doc.setFont('helvetica','normal');
-  doc.text(`${cliente.nome || '-'}  |  Doc: ${cliente.documento || '-'}  |  Tel: ${cliente.telefone || '-'}`, 15, y); y+=11;
-
-  doc.setFont('helvetica','bold');
-  doc.text(tipo === 'retirada' ? `Data da retirada: ${fmtDate(loc.data_retirada)}` : `Data da devolução: ${fmtDate(loc.data_devolucao_real || todayISO())}`, 15, y);
-  y+=9;
-
-  doc.text('ITENS E ESTADO DE CONSERVAÇÃO', 15, y); y+=3;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-
-  // cabeçalho da tabela
-  doc.setFillColor(230,230,230);
-  doc.rect(15, y, 180, 7, 'F');
-  doc.setFont('helvetica','bold');
-  doc.text('Ferramenta', 17, y+5);
-  doc.text('Qtd', 110, y+5);
-  doc.text('Estado (Bom / Regular / Danificado)', 130, y+5);
-  y+=7;
-  doc.setFont('helvetica','normal');
-
-  itens.forEach(i=>{
-    const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    doc.rect(15, y, 180, 9);
-    doc.text(`${f?f.nome:'?'} (${f?f.codigo:''})`, 17, y+6);
-    doc.text(String(i.quantidade), 110, y+6);
-    doc.text('_______________________', 130, y+6);
-    y+=9;
-  });
-  y+=8;
-
-  doc.setFontSize(10);
-  doc.text('Observações:', 15, y); y+=5;
-  doc.rect(15, y, 180, 18);
-  y+=25;
-
-  doc.setFontSize(9);
-  const declaracao = tipo === 'retirada'
-    ? 'Declaro ter recebido o(s) equipamento(s) acima em bom estado de funcionamento e me responsabilizo pela guarda, conservação e devolução dentro do prazo acordado, conforme contrato de locação.'
-    : 'Declaro ter devolvido o(s) equipamento(s) acima, e ambas as partes conferem o estado de conservação descrito nesta tabela como correto e de comum acordo.';
-  const linhas = doc.splitTextToSize(declaracao, 180);
-  doc.text(linhas, 15, y); y += linhas.length*4.5 + 15;
-
-  doc.setFontSize(10);
-  doc.text('_______________________________', 15, y);
-  doc.text('_______________________________', 115, y); y+=5;
-  doc.text('Assinatura — Locadora', 15, y);
-  doc.text('Assinatura — Locatário', 115, y);
-
-  desenharRodapePDF(doc);
-  doc.save(`termo-${tipo}-${loc.numero || 'novo'}.pdf`);
-  toast(`Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} gerado`);
-}
-
-/* ======================================================
-   AUTENTICAÇÃO
-   ====================================================== */
-
-  // Gerar manifest PWA inline
-  (function() {
-    var manifest = {
-      name: 'LocaObra',
-      short_name: 'LocaObra',
-      description: 'Gestão de Locação de Ferramentas',
-      start_url: './',
-      display: 'standalone',
-      background_color: '#1E2023',
-      theme_color: '#E00000',
-      icons: [{
-        src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="%231E2023" stroke="%23E00000" stroke-width="6"/><text x="50" y="67" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="46" fill="%23E00000">L</text></svg>'),
-        sizes: '192x192',
-        type: 'image/svg+xml'
-      }]
-    };
-    var blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = url;
-    document.head.appendChild(link);
-  })();
-
-  // ===== LANDING PAGE =====
-  function entrarDemoLocaObra() {
-    document.getElementById('landing-screen').style.display = 'none';
-    document.getElementById('app-shell').classList.remove('hidden');
-    render('dashboard');
-    // Banner demo
-    var banner = document.createElement('div');
-    banner.id = 'demoBanner';
-    banner.style.cssText = 'background:#E00000;color:white;text-align:center;padding:9px 16px;font-size:11px;font-weight:700;font-family:Oswald,sans-serif;letter-spacing:0.5px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:200;';
-    banner.innerHTML = '<span>⚠️ MODO DEMO — dados fictícios</span><button onclick="document.getElementById(\'landing-screen\').style.display=\'flex\';document.getElementById(\'app-shell\').classList.add(\'hidden\');this.closest(\'#demoBanner\').remove();" style="background:white;color:#E00000;border:none;border-radius:4px;padding:4px 10px;font-family:Oswald,sans-serif;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:0.5px;">VOLTAR</button>';
-    var appShell = document.getElementById('app-shell');
-    if (appShell && !document.getElementById('demoBanner')) appShell.parentNode.insertBefore(banner, appShell);
-  }
-
-  function assinarLocaObra() {
-    var msg = 'Olá Wilson! Quero contratar o LocaObra — sistema de gestão de locação de ferramentas.\n\nChave PIX: comercial@fosterconstrucoes.com.br\n\nAguardo informações sobre os planos!';
-    window.open('https://wa.me/5524992096103?text=' + encodeURIComponent(msg), '_blank');
-  }
-
-  async function initAuth(){
-  if(!supaOk){
-    // sem Supabase: mostra landing
-    document.getElementById('landing-screen').style.display = 'flex';
-    return;
-  }
-  try{
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if(session){
-      document.getElementById('landing-screen').style.display = 'none';
-      document.getElementById('app-shell').classList.remove('hidden');
-      render('dashboard');
-    } else {
-      // Sem sessão: mostra landing
-      document.getElementById('landing-screen').style.display = 'flex';
-    }
-  }catch(err){
-    console.error('Erro ao verificar sessão:', err);
-    document.getElementById('landing-screen').style.display = 'flex';
-  }
-}
-
-document.getElementById('form-login').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const senha = document.getElementById('login-senha').value;
-  const errBox = document.getElementById('login-error');
-  errBox.style.display = 'none';
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
-  if(error){
-    errBox.textContent = 'E-mail ou senha inválidos.';
-    errBox.style.display = 'block';
-    return;
-  }
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app-shell').classList.remove('hidden');
-  render('dashboard');
-});
-
-document.getElementById('logout-btn').addEventListener('click', async ()=>{
-  const demoB = document.getElementById('demoBanner'); if(demoB) demoB.remove();
-  try{ if(supaOk && supabaseClient) await supabaseClient.auth.signOut(); }catch(err){ console.error(err); }
-  document.getElementById('app-shell').classList.add('hidden');
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('landing-screen').style.display = 'flex';
-  window.scrollTo(0,0);
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-senha').value = '';
-});
-
-/* ======================================================
-   INIT
-   ====================================================== */
-initAuth();
 </script>
 </body>
 </html>
