@@ -24,7 +24,7 @@ const REFERENCIAS = {
 
 const CAMPOS_EMPRESA = ['nome','cnpj','telefone','email','endereco','cidade','cor_primaria','logo'];
 const CAMPOS_EMPRESA_PUBLICOS = 'id, nome, cnpj, telefone, email, endereco, cidade, cor_primaria, logo, plano, teste_ate, assinatura_plano, assinatura_ciclo, assinatura_status, pago_ate, fatura_url, fundador, preco_travado_ate, pix_modo, pix_chave, pix_tipo, pix_nome, pix_cidade, loc_asaas_env';
-const DIAS_TESTE = 30; // oferta de lançamento
+const DIAS_TESTE = 14; // teste grátis (padrão de mercado: 7 a 15 dias)
 
 /* ---------------- planos e cobrança (Asaas) ---------------- */
 const PLANOS = {
