@@ -15,3 +15,6 @@ ALTER TABLE locacoes ADD COLUMN local_entrega_id TEXT;
 ALTER TABLE locacoes ADD COLUMN endereco_entrega TEXT;
 ALTER TABLE locacoes ADD COLUMN forma_pagamento TEXT;
 ALTER TABLE empresas ADD COLUMN formas_pagamento TEXT;
+-- relatório do dia: quem fez a locação e quem registrou o pagamento
+ALTER TABLE locacoes ADD COLUMN criado_por TEXT;
+ALTER TABLE pagamentos ADD COLUMN registrado_por TEXT;

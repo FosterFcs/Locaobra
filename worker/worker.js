@@ -795,6 +795,9 @@ async function rotear(request, env, url){
         const nomes = ['id', 'empresa_id', ...presentes];
         const valores = [novoId, s.empresa_id, ...presentes.map(c => item[c])];
 
+        // quem fez: sempre o usuário logado (não vem do navegador)
+        if(tabela === 'locacoes'){ nomes.push('criado_por'); valores.push(s.nome || s.email); }
+        if(tabela === 'pagamentos'){ nomes.push('registrado_por'); valores.push(s.nome || s.email); }
         if(tabela === 'locacoes'){
           // numeração por empresa, atômica (sem número repetido)
           const r = await env.DB.prepare('UPDATE empresas SET proximo_numero = proximo_numero + 1 WHERE id = ?1 RETURNING proximo_numero')

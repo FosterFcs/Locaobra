@@ -399,6 +399,7 @@ tr:hover td{background:#F2EFE8;}
       <button class="nav-btn" data-view="ferramentas"><span class="icon">▣</span><span class="label">Ferramentas</span></button>
       <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
       <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
+      <button class="nav-btn" data-view="relatorio"><span class="icon">▤</span><span class="label">Relatório do dia</span></button>
       <button class="nav-btn" data-view="usuarios"><span class="icon">◈</span><span class="label">Usuários</span></button>
       <button class="nav-btn admin-only" data-view="empresa"><span class="icon">⚙</span><span class="label">Minha empresa</span></button>
       <button class="nav-btn admin-only" data-view="plano"><span class="icon">★</span><span class="label">Plano</span></button>
@@ -609,7 +610,7 @@ function toast(msg, ok=true){
 
 function fmtMoney(v){ return 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function fmtDate(d){ if(!d) return '-'; const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('pt-BR'); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayISO(){ const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10); } // data local (não UTC)
 function uid(){ return 'id-'+Math.random().toString(36).slice(2,10); }
 function fmtNumero(loc){
   if(!loc || !loc.numero) return '-';
@@ -675,7 +676,7 @@ async function loadAll(){
    ====================================================== */
 const titles = {
   dashboard:'Dashboard', clientes:'Clientes', locais:'Locais de entrega / obras', ferramentas:'Ferramentas',
-  'nova-locacao':'Nova Locação', locacoes:'Locações', usuarios:'Usuários', empresa:'Minha empresa', plano:'Plano e pagamento'
+  'nova-locacao':'Nova Locação', locacoes:'Locações', relatorio:'Relatório do dia', usuarios:'Usuários', empresa:'Minha empresa', plano:'Plano e pagamento'
 };
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -713,6 +714,7 @@ async function render(view){
   else if(view === 'ferramentas') renderFerramentas(el);
   else if(view === 'nova-locacao') renderNovaLocacao(el);
   else if(view === 'locacoes') renderLocacoes(el);
+  else if(view === 'relatorio') renderRelatorio(el);
   else if(view === 'usuarios') await renderUsuarios(el);
   else if(view === 'empresa') renderEmpresa(el);
   else if(view === 'plano') await renderPlano(el);
@@ -1555,7 +1557,7 @@ async function salvarLocacao(){
 
   let locacaoId, numero;
   if(supaOk){
-    const {data, error} = await supabaseClient.from('locacoes').insert(prepararLocacao(locacaoObj)).select().single();
+    const {data, error} = await supabaseClient.from('locacoes').insert(prepararLocacao(locacaoObj, true)).select().single();
     if(error){ toast('Erro ao salvar locação', false); console.error(error); return; }
     locacaoId = data.id; numero = data.numero;
     const itens = carrinho.map(i=>{
@@ -1570,7 +1572,7 @@ async function salvarLocacao(){
       toast((e2.message || 'Erro ao gravar itens') + ' — confira o estoque e a locação nº ' + numero, false);
     }
     if(caucao > 0){
-      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento: forma || 'a definir'});
+      await supabaseClient.from('pagamentos').insert(prepararPagamento({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento: forma || 'a definir', data_pagamento: todayISO()}));
     }
   } else {
     locacaoId = uid(); numero = DB.locacoes.length + 1;
@@ -2001,13 +2003,19 @@ async function gravarLocal(dados, id){
             : await supabaseClient.from('locais_entrega').insert(dados);
 }
 // local, endereço e forma da locação: no servidor antigo vão marcados nas observações
-function prepararLocacao(obj){
+function prepararLocacao(obj, nova){
   if(!COMPAT) return obj;
   const o = { ...obj };
   const m = { l: o.local_entrega_id ?? null, e: o.endereco_entrega ?? null, f: o.forma_pagamento ?? null };
+  if(nova) m.u = usuarioNome || usuarioLogado || null;
   delete o.local_entrega_id; delete o.endereco_entrega; delete o.forma_pagamento;
   o.observacoes = (o.observacoes ? o.observacoes + '\n' : '') + '[[LO:' + JSON.stringify(m) + ']]';
   return o;
+}
+// quem registrou o pagamento (no servidor novo é o próprio servidor que grava)
+function prepararPagamento(obj){
+  if(!COMPAT) return obj;
+  return { ...obj, observacoes: (obj.observacoes ? obj.observacoes + '\n' : '') + '[[PG:' + JSON.stringify({ u: usuarioNome || usuarioLogado || null }) + ']]' };
 }
 function camposLocalHTML(px, l = {}){
   return `
@@ -2171,7 +2179,7 @@ function abrirReceber(locId){
   const total = Number(loc.valor_total || 0) + Number(loc.valor_multa || 0);
   const pago = pags.reduce((t, p) => t + Number(p.valor || 0), 0);
   const saldo = saldoLocacao(loc);
-  const hist = pags.length ? `<div class="pix-hist"><b>Pagamentos registrados</b>${pags.map(p => `<div><span>${fmtDate(String(p.data_pagamento||'').slice(0,10))} · ${esc(p.forma_pagamento || '-')}${p.observacoes ? ' · ' + esc(p.observacoes) : ''}</span>
+  const hist = pags.length ? `<div class="pix-hist"><b>Pagamentos registrados</b>${pags.map(p => `<div><span>${fmtDate(String(p.data_pagamento||'').slice(0,10))} · ${esc(p.forma_pagamento || '-')}${p.observacoes ? ' · ' + esc(p.observacoes) : ''}${p.registrado_por ? ' · ' + esc(p.registrado_por) : ''}</span>
       <span class="mono">${fmtMoney(p.valor)} ${PAPEL === 'admin' ? `<button class="pix-fechar" style="font-size:18px" title="Excluir pagamento" onclick="excluirPagamento('${p.id}', '${loc.id}')">×</button>` : ''}</span></div>`).join('')}</div>` : '';
   const formaPadrao = loc.forma_pagamento || '';
   const fundo = abrirModal('rec-fundo', 'Receber pagamento', `Locação #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
@@ -2201,9 +2209,9 @@ function abrirReceber(locId){
     const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true;
     const valor = Math.round(Number(document.getElementById('rec-valor').value) * 100) / 100;
     if(!(valor > 0)){ toast('Informe o valor', false); btn.disabled = false; return; }
-    const r = await supabaseClient.from('pagamentos').insert({
+    const r = await supabaseClient.from('pagamentos').insert(prepararPagamento({
       locacao_id: loc.id, tipo: 'pagamento', valor, forma_pagamento: document.getElementById('rec-forma').value,
-      data_pagamento: document.getElementById('rec-data').value || todayISO(), observacoes: document.getElementById('rec-obs').value.trim() || null });
+      data_pagamento: document.getElementById('rec-data').value || todayISO(), observacoes: document.getElementById('rec-obs').value.trim() || null }));
     if(r.error){ toast(r.error.message || 'Erro ao registrar', false); btn.disabled = false; return; }
     toast(`Recebimento de ${fmtMoney(valor)} registrado`);
     await loadAll();
@@ -2309,6 +2317,143 @@ function recalcularEdicao(locId){
   const campo = document.getElementById('ed-total');
   campo.value = total.toFixed(2); campo.style.outline = '';
   toast(`Novo valor: ${fmtMoney(total)} (${dias} dia(s), cobrança ${tipo})`);
+}
+
+/* ======================================================
+   RELATÓRIO DO DIA (ou período): contratos feitos, pagamentos
+   recebidos, forma de pagamento e usuário
+   ====================================================== */
+function quemFez(l){ return (l && l.criado_por) || '—'; }
+function diaCriacao(l){ return dataBR(l.criado_em); }
+function diaPagamento(p){ const d = String(p.data_pagamento || ''); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : dataBR(d); }
+function dadosRelatorio(de, ate, usuario){
+  const dentro = d => d >= de && d <= ate;
+  const contratos = DB.locacoes.filter(l => dentro(diaCriacao(l)) && (!usuario || quemFez(l) === usuario))
+    .sort((a, b) => (a.numero || 0) - (b.numero || 0));
+  const pags = DB.pagamentos.filter(p => (p.tipo === 'pagamento' || p.tipo === 'caucao') && dentro(diaPagamento(p)))
+    .map(p => ({ ...p, loc: DB.locacoes.find(l => l.id === p.locacao_id) }))
+    .filter(p => !usuario || (p.registrado_por || quemFez(p.loc)) === usuario)
+    .sort((a, b) => String(a.data_pagamento).localeCompare(String(b.data_pagamento)));
+  const porForma = {};
+  pags.filter(p => p.tipo === 'pagamento').forEach(p => { const f = p.forma_pagamento || 'Não informada'; porForma[f] = (porForma[f] || 0) + Number(p.valor || 0); });
+  const totalContratado = contratos.filter(l => l.status !== 'cancelada').reduce((t, l) => t + Number(l.valor_total || 0), 0);
+  const totalRecebido = pags.filter(p => p.tipo === 'pagamento').reduce((t, p) => t + Number(p.valor || 0), 0);
+  const totalCaucao = pags.filter(p => p.tipo === 'caucao').reduce((t, p) => t + Number(p.valor || 0), 0);
+  return { contratos, pags, porForma, totalContratado, totalRecebido, totalCaucao };
+}
+function renderRelatorio(el){
+  const hoje = todayISO();
+  const usuarios = [...new Set(DB.locacoes.map(quemFez).concat(DB.pagamentos.map(p => p.registrado_por).filter(Boolean)))].filter(u => u !== '—').sort();
+  el.innerHTML = `
+    ${configNote()}
+    <div class="panel">
+      <h2>Relatório do dia</h2>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field"><label for="rel-de">De</label><input id="rel-de" type="date" value="${hoje}"></div>
+        <div class="field"><label for="rel-ate">Até</label><input id="rel-ate" type="date" value="${hoje}"></div>
+        <div class="field"><label for="rel-usuario">Usuário</label><select id="rel-usuario"><option value="">Todos</option>${usuarios.map(u => `<option>${esc(u)}</option>`).join('')}</select></div>
+      </div>
+      <div class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="relRapido(0)">Hoje</button>
+        <button class="btn btn-outline btn-sm" onclick="relRapido(1)">Ontem</button>
+        <button class="btn btn-outline btn-sm" onclick="relRapido(7)">Últimos 7 dias</button>
+        <button class="btn btn-outline btn-sm" onclick="relRapido('mes')">Este mês</button>
+        <button class="btn btn-primary btn-sm" onclick="relatorioPDF()">Imprimir / PDF</button>
+      </div>
+    </div>
+    <div id="rel-corpo"></div>`;
+  ['rel-de','rel-ate','rel-usuario'].forEach(id => document.getElementById(id).addEventListener('change', atualizarRelatorio));
+  atualizarRelatorio();
+}
+function relRapido(q){
+  const d = new Date(Date.now() - 3 * 3600000);
+  const iso = x => x.toISOString().slice(0, 10);
+  let de, ate = iso(d);
+  if(q === 'mes'){ de = ate.slice(0, 8) + '01'; }
+  else if(q === 1){ d.setUTCDate(d.getUTCDate() - 1); de = ate = iso(d); }
+  else { const i = new Date(d); i.setUTCDate(i.getUTCDate() - (q ? q - 1 : 0)); de = iso(i); }
+  document.getElementById('rel-de').value = de; document.getElementById('rel-ate').value = ate;
+  atualizarRelatorio();
+}
+function filtrosRelatorio(){
+  let de = document.getElementById('rel-de').value || todayISO(), ate = document.getElementById('rel-ate').value || de;
+  if(ate < de) [de, ate] = [ate, de];
+  return { de, ate, usuario: document.getElementById('rel-usuario').value };
+}
+function atualizarRelatorio(){
+  const { de, ate, usuario } = filtrosRelatorio();
+  const r = dadosRelatorio(de, ate, usuario);
+  const nomeCli = l => { const c = l && DB.clientes.find(x => x.id === l.cliente_id); return c ? c.nome : '—'; };
+  const status = l => l.status === 'cancelada' ? '<span class="badge badge-neutral">Cancelada</span>' : l.status === 'devolvida' ? '<span class="badge badge-neutral">Devolvida</span>' : '<span class="badge badge-ok">Ativa</span>';
+  document.getElementById('rel-corpo').innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:16px;">
+      <div class="panel"><div class="sub-entrega">Contratos feitos</div><div class="mono" style="font-size:22px;"><b>${r.contratos.length}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Valor contratado</div><div class="mono" style="font-size:20px;"><b>${fmtMoney(r.totalContratado)}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Total recebido</div><div class="mono" style="font-size:20px; color:var(--green)"><b>${fmtMoney(r.totalRecebido)}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Caução recebida</div><div class="mono" style="font-size:20px;"><b>${fmtMoney(r.totalCaucao)}</b></div></div>
+    </div>
+    <div class="panel">
+      <h2>Recebido por forma de pagamento</h2>
+      ${Object.keys(r.porForma).length ? `<table><thead><tr><th>Forma</th><th>Total</th></tr></thead><tbody>
+        ${Object.entries(r.porForma).sort((a, b) => b[1] - a[1]).map(([f, v]) => `<tr><td>${esc(f)}</td><td class="mono">${fmtMoney(v)}</td></tr>`).join('')}
+        <tr><td><b>Total</b></td><td class="mono"><b>${fmtMoney(r.totalRecebido)}</b></td></tr></tbody></table>` : '<div class="empty" style="padding:12px;">Nenhum pagamento no período</div>'}
+    </div>
+    <div class="panel">
+      <h2>Contratos feitos <span class="tag">${r.contratos.length}</span></h2>
+      ${r.contratos.length ? `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Usuário</th><th>Valor</th><th>Forma</th><th>Recebido</th><th>Status</th></tr></thead><tbody>
+        ${r.contratos.map(l => { const pago = DB.pagamentos.filter(p => p.locacao_id === l.id && p.tipo === 'pagamento').reduce((t, p) => t + Number(p.valor || 0), 0);
+          return `<tr><td class="mono">#${fmtNumero(l)}</td><td>${esc(nomeCli(l))}</td><td>${esc(quemFez(l))}</td><td class="mono">${fmtMoney(l.valor_total)}</td>
+          <td>${esc(l.forma_pagamento || 'A combinar')}</td><td class="mono">${fmtMoney(pago)}</td><td>${status(l)}</td></tr>`; }).join('')}
+      </tbody></table>` : '<div class="empty" style="padding:12px;">Nenhum contrato no período</div>'}
+    </div>
+    <div class="panel">
+      <h2>Pagamentos recebidos <span class="tag">${r.pags.length}</span></h2>
+      ${r.pags.length ? `<table><thead><tr><th>Data</th><th>Contrato</th><th>Cliente</th><th>Tipo</th><th>Forma</th><th>Valor</th><th>Usuário</th></tr></thead><tbody>
+        ${r.pags.map(p => `<tr><td>${fmtDate(diaPagamento(p))}</td><td class="mono">${p.loc ? '#' + fmtNumero(p.loc) : '—'}</td><td>${esc(nomeCli(p.loc))}</td>
+          <td>${p.tipo === 'caucao' ? 'Caução' : 'Pagamento'}${p.observacoes ? `<div class="sub-entrega">${esc(p.observacoes)}</div>` : ''}</td><td>${esc(p.forma_pagamento || '-')}</td>
+          <td class="mono">${fmtMoney(p.valor)}</td><td>${esc(p.registrado_por || quemFez(p.loc))}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="empty" style="padding:12px;">Nenhum pagamento no período</div>'}
+    </div>`;
+}
+function relatorioPDF(){
+  const { de, ate, usuario } = filtrosRelatorio();
+  const r = dadosRelatorio(de, ate, usuario);
+  const nomeCli = l => { const c = l && DB.clientes.find(x => x.id === l.cliente_id); return c ? c.nome : '—'; };
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const periodo = de === ate ? fmtDate(de) : `${fmtDate(de)} a ${fmtDate(ate)}`;
+  let y = desenharCabecalhoPDF(doc, 'RELATÓRIO DO DIA', `Período: ${periodo}${usuario ? ' · Usuário: ' + usuario : ''}`);
+  const novaPagina = (alt) => { if(y + alt > 280){ desenharRodapePDF(doc); doc.addPage(); y = 20; } };
+  const corta = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Contratos feitos: ${r.contratos.length}   |   Valor contratado: ${fmtMoney(r.totalContratado)}`, 15, y); y += 6;
+  doc.text(`Total recebido: ${fmtMoney(r.totalRecebido)}   |   Caução recebida: ${fmtMoney(r.totalCaucao)}`, 15, y); y += 9;
+
+  doc.setFont('helvetica','bold'); doc.text('RECEBIDO POR FORMA DE PAGAMENTO', 15, y); y += 6; doc.setFont('helvetica','normal');
+  const formas = Object.entries(r.porForma).sort((a, b) => b[1] - a[1]);
+  if(!formas.length){ doc.text('Nenhum pagamento no período.', 15, y); y += 6; }
+  formas.forEach(([f, v]) => { novaPagina(6); doc.text(corta(f, 40), 18, y); doc.text(fmtMoney(v), 120, y); y += 5.5; });
+  y += 5;
+
+  const tabela = (titulo, cab, cols, linhas) => {
+    novaPagina(20);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(titulo, 15, y); y += 3;
+    doc.setFillColor(230,230,230); doc.rect(15, y, 180, 6.5, 'F'); doc.setFontSize(8.5);
+    cab.forEach((c, i) => doc.text(c, cols[i], y + 4.5)); y += 6.5; doc.setFont('helvetica','normal');
+    if(!linhas.length){ doc.text('Nenhum registro no período.', 17, y + 4.5); y += 8; return; }
+    linhas.forEach(l => { novaPagina(6); l.forEach((t, i) => doc.text(String(t), cols[i], y + 4.3)); doc.setDrawColor(225,225,225); doc.line(15, y + 6, 195, y + 6); y += 6; });
+    y += 6;
+  };
+  tabela(`CONTRATOS FEITOS (${r.contratos.length})`, ['Nº', 'Cliente', 'Usuário', 'Valor', 'Forma', 'Status'], [17, 35, 85, 118, 143, 177],
+    r.contratos.map(l => [fmtNumero(l), corta(nomeCli(l), 26), corta(quemFez(l), 18), fmtMoney(l.valor_total), corta(l.forma_pagamento || 'A combinar', 18), l.status]));
+  tabela(`PAGAMENTOS RECEBIDOS (${r.pags.length})`, ['Data', 'Contrato', 'Cliente', 'Forma', 'Valor', 'Usuário'], [17, 37, 58, 110, 143, 168],
+    r.pags.map(p => [fmtDate(diaPagamento(p)).slice(0, 5), p.loc ? fmtNumero(p.loc) : '—', corta(nomeCli(p.loc), 27) + (p.tipo === 'caucao' ? ' (caução)' : ''),
+      corta(p.forma_pagamento || '-', 18), fmtMoney(p.valor), corta(p.registrado_por || quemFez(p.loc), 15)]));
+  doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+  novaPagina(8); doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} por ${usuarioNome || usuarioLogado || '-'}`, 15, y);
+  doc.setTextColor(0,0,0);
+  desenharRodapePDF(doc);
+  entregarPDF(doc, `relatorio-${de}${de !== ate ? '_a_' + ate : ''}.pdf`, `Relatório — ${periodo}`);
 }
 
 /* ======================================================
@@ -2912,6 +3057,7 @@ async function gerarTermoPDF(loc, tipo){
    AUTENTICAÇÃO
    ====================================================== */
 let usuarioLogado = null;
+let usuarioNome = null; // nome do usuário (aparece nos relatórios); se vazio, usa o e-mail
 
 async function initAuth(){
   if(!supaOk){
@@ -2924,6 +3070,7 @@ async function initAuth(){
     const { data: { session } } = await supabaseClient.auth.getSession();
     if(session){
       usuarioLogado = session.user?.email || null;
+      usuarioNome = session.user?.nome || null;
       aplicarEmpresa(session.empresa, session.user?.papel);
       document.getElementById('app-shell').classList.remove('hidden');
       render('dashboard');
@@ -2952,6 +3099,7 @@ document.getElementById('form-login').addEventListener('submit', async (e)=>{
     return;
   }
   usuarioLogado = data?.session?.user?.email || email;
+  usuarioNome = data?.session?.user?.nome || null;
   aplicarEmpresa(data?.session?.empresa, data?.session?.user?.papel);
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
@@ -2998,6 +3146,7 @@ document.getElementById('form-cadastro').addEventListener('submit', async (e) =>
   if(!res.ok){ errBox.textContent = j.message || 'Não foi possível criar a conta.'; errBox.style.display = 'block'; return; }
   localStorage.setItem('lo_session', j.token);
   usuarioLogado = j.user.email;
+  usuarioNome = j.user.nome || null;
   aplicarEmpresa(j.empresa, j.user.papel);
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
