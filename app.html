@@ -1651,11 +1651,13 @@ function tableLocacoesCompleta(list){
           ${l.status!=='cancelada' ? `<button class="btn btn-outline btn-sm" onclick="abrirEditarLocacao('${l.id}')">Editar</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF('${l.id}')">Contrato</button>
           <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF('${l.id}')">Recibo</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'retirada')">Termo Retirada</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'retirada')">Ordem de Serviço</button>
           ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'devolucao')">Termo Devolução</button>` : ''}
           ${l.status!=='cancelada' ? `<button class="btn btn-dark btn-sm" onclick="abrirPix('${l.id}')">Pix</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
+          ${l.status==='ativa' ? `<button class="btn btn-danger btn-sm" onclick="cancelarLocacao('${l.id}')">Cancelar</button>` : ''}
+          ${l.status==='cancelada' && PAPEL==='admin' ? `<button class="btn btn-danger btn-sm" onclick="excluirLocacao('${l.id}')">Excluir</button>` : ''}
         </td>
       </tr>`;
     }).join('')}
@@ -1691,6 +1693,46 @@ async function marcarDevolvida(id){
     });
   }
   toast(multa > 0 ? `Devolução registrada com multa de ${fmtMoney(multa)} (${diasAtraso} dia(s) de atraso)` : 'Devolução registrada, estoque atualizado');
+  render('locacoes');
+}
+
+/* Cancelar: contrato feito errado ou desistência. Devolve as ferramentas ao estoque. */
+async function cancelarLocacao(id){
+  const loc = DB.locacoes.find(x => x.id === id); if(!loc) return;
+  if(loc.status !== 'ativa'){ toast('Só é possível cancelar locações ativas', false); return; }
+  const motivo = prompt(`Cancelar o contrato nº ${fmtNumero(loc)}?\nAs ferramentas voltam para o estoque.\n\nMotivo (opcional):`);
+  if(motivo === null) return;
+  const itens = DB.itens_locacao.filter(i => i.locacao_id === id);
+  // devolve o estoque item a item
+  for(const i of itens){
+    const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); if(!f) continue;
+    const nova = Math.min(Number(f.quantidade_total || 0), Number(f.quantidade_disponivel || 0) + Number(i.quantidade || 0));
+    const r = await supabaseClient.from('ferramentas').update({ quantidade_disponivel: nova }).eq('id', f.id);
+    if(r.error){ toast(r.error.message || 'Erro ao devolver o estoque', false); return; }
+    f.quantidade_disponivel = nova;
+  }
+  const obs = [loc.observacoes, `Cancelado em ${new Date().toLocaleDateString('pt-BR')}${motivo.trim() ? ' — ' + motivo.trim() : ''}`].filter(Boolean).join('\n');
+  const r = await supabaseClient.from('locacoes').update({ status: 'cancelada', observacoes: obs }).eq('id', id);
+  if(r.error){ toast(r.error.message || 'Erro ao cancelar', false); return; }
+  toast(`Contrato nº ${fmtNumero(loc)} cancelado e estoque devolvido`);
+  render('locacoes');
+}
+/* Excluir de vez (só administrador, só locação já cancelada) */
+async function excluirLocacao(id){
+  const loc = DB.locacoes.find(x => x.id === id); if(!loc) return;
+  if(loc.status !== 'cancelada'){ toast('Cancele a locação antes de excluir', false); return; }
+  if(!confirm(`Excluir DEFINITIVAMENTE o contrato nº ${fmtNumero(loc)}? Os pagamentos registrados nele também serão apagados. Não dá para desfazer.`)) return;
+  for(const p of DB.pagamentos.filter(x => x.locacao_id === id)){
+    const r = await supabaseClient.from('pagamentos').delete().eq('id', p.id);
+    if(r.error){ toast(r.error.message || 'Erro ao excluir pagamentos', false); return; }
+  }
+  for(const i of DB.itens_locacao.filter(x => x.locacao_id === id)){
+    const r = await supabaseClient.from('itens_locacao').delete().eq('id', i.id);
+    if(r.error){ toast(r.error.message || 'Erro ao excluir itens', false); return; }
+  }
+  const r = await supabaseClient.from('locacoes').delete().eq('id', id);
+  if(r.error){ toast(/FOREIGN|ligado/i.test(r.error.message || '') ? 'Esta locação tem cobrança Pix registrada e não pode ser excluída. Ela fica como cancelada.' : (r.error.message || 'Erro ao excluir'), false); render('locacoes'); return; }
+  toast('Contrato excluído');
   render('locacoes');
 }
 
@@ -2789,8 +2831,8 @@ async function gerarTermoPDF(loc, tipo){
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const titulo = tipo === 'retirada' ? 'TERMO DE RETIRADA DE FERRAMENTAS' : 'TERMO DE DEVOLUÇÃO DE FERRAMENTAS';
-  let y = desenharCabecalhoPDF(doc, titulo, `Locação Nº ${fmtNumero(loc)}`);
+  const titulo = tipo === 'retirada' ? 'ORDEM DE SERVIÇO — RETIRADA DE EQUIPAMENTOS' : 'TERMO DE DEVOLUÇÃO DE FERRAMENTAS';
+  let y = desenharCabecalhoPDF(doc, titulo, tipo === 'retirada' ? `O.S. Nº ${fmtNumero(loc)}` : `Locação Nº ${fmtNumero(loc)}`);
 
   doc.setFont('helvetica','bold'); doc.text('LOCADORA', 15, y); y+=5.5;
   doc.setFont('helvetica','normal');
@@ -2863,7 +2905,7 @@ async function gerarTermoPDF(loc, tipo){
   }catch(e){ console.error('QR code termo', e); }
 
   desenharRodapePDF(doc);
-  entregarPDF(doc, `termo-${tipo}-${fmtNumero(loc).replace('/','-')}.pdf`, `Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} nº ${fmtNumero(loc)}`);
+  entregarPDF(doc, `${tipo === 'retirada' ? 'ordem-de-servico' : 'termo-devolucao'}-${fmtNumero(loc).replace('/','-')}.pdf`, `${tipo === 'retirada' ? 'Ordem de Serviço (O.S.)' : 'Termo de devolução'} nº ${fmtNumero(loc)}`);
 }
 
 /* ======================================================
