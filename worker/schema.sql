@@ -167,3 +167,20 @@ CREATE INDEX IF NOT EXISTS idx_itens_locacao ON itens_locacao(locacao_id);
 CREATE INDEX IF NOT EXISTS idx_pagamentos_empresa ON pagamentos(empresa_id);
 -- código da ferramenta único por empresa, sem diferenciar maiúsculas
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ferramentas_codigo_unico ON ferramentas(empresa_id, UPPER(TRIM(codigo)));
+
+-- Locais de entrega / obras e formas de pagamento (nov/2026) — ver migracao-entrega-pagamentos.sql
+CREATE TABLE IF NOT EXISTS locais_entrega (
+  id TEXT PRIMARY KEY,
+  empresa_id TEXT NOT NULL REFERENCES empresas(id),
+  cliente_id TEXT NOT NULL REFERENCES clientes(id),
+  nome TEXT NOT NULL,
+  endereco TEXT NOT NULL,
+  bairro TEXT,
+  cidade TEXT,
+  cep TEXT,
+  contato TEXT,
+  telefone TEXT,
+  observacoes TEXT,
+  status TEXT DEFAULT 'ativo',
+  criado_em TEXT DEFAULT (datetime('now'))
+);

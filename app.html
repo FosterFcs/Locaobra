@@ -156,6 +156,10 @@ tr:hover td{background:#F2EFE8;}
 
 .pix-fundo{position:fixed; inset:0; background:rgba(20,20,22,.55); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow-y:auto;}
 .pix-caixa{background:#fff; border-radius:10px; width:100%; max-width:460px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.pdf-caixa{max-width:760px;}
+.pdf-previa{width:100%; height:62vh; border:1px solid var(--line); border-radius:6px; margin-bottom:12px; background:#F7F5F0;}
+.pdf-acoes{display:flex; flex-wrap:wrap; gap:8px;}
+.pdf-acoes .btn{flex:1; min-width:150px; text-align:center; text-decoration:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; border-radius:var(--radius); padding:11px 18px; cursor:pointer;}
 .pix-caixa h2{font-size:18px; margin-bottom:2px;}
 .pix-topo{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px;}
 .pix-fechar{background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color:var(--ink-soft);}
@@ -1588,10 +1592,10 @@ function tableLocacoesCompleta(list){
         <td class="mono">${fmtMoney(l.valor_total)}</td>
         <td>${badge}</td>
         <td class="actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Contrato</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF(${JSON.stringify(l).replace(/"/g,'&quot;')})">Recibo</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'retirada')">Termo Retirada</button>
-          ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF(${JSON.stringify(l).replace(/"/g,'&quot;')}, 'devolucao')">Termo Devolução</button>` : ''}
+          <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF('${l.id}')">Contrato</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF('${l.id}')">Recibo</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'retirada')">Termo Retirada</button>
+          ${l.status==='devolvida' ? `<button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'devolucao')">Termo Devolução</button>` : ''}
           ${l.status!=='cancelada' ? `<button class="btn btn-dark btn-sm" onclick="abrirPix('${l.id}')">Pix</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-outline btn-sm" onclick="lembreteWhatsapp('${l.id}')">WhatsApp</button>` : ''}
           ${l.status==='ativa' ? `<button class="btn btn-primary btn-sm" onclick="marcarDevolvida('${l.id}')">Devolver</button>` : ''}
@@ -2128,6 +2132,8 @@ function desenharRodapePDF(doc){
    GERAÇÃO DE PDF — CONTRATO
    ====================================================== */
 async function gerarContratoPDF(loc){
+  if(typeof loc === 'string') loc = DB.locacoes.find(l => l.id === loc);
+  if(!loc){ toast('Locação não encontrada', false); return; }
   const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
@@ -2206,14 +2212,54 @@ async function gerarContratoPDF(loc){
   }catch(e){ console.error('QR code contrato', e); }
 
   desenharRodapePDF(doc);
-  doc.save(`contrato-${fmtNumero(loc).replace('/','-')}.pdf`);
-  toast('Contrato PDF gerado');
+  entregarPDF(doc, `contrato-${fmtNumero(loc).replace('/','-')}.pdf`, `Contrato nº ${fmtNumero(loc)}`);
+}
+
+
+/* ======================================================
+   ENTREGA DO PDF — abre uma janela com Abrir/Imprimir, Baixar e
+   Compartilhar. O Chrome bloqueia downloads automáticos a partir do
+   2º arquivo da mesma página, por isso o arquivo não é mais baixado
+   sozinho: a pessoa escolhe o que fazer.
+   ====================================================== */
+let PDF_URL = null;
+function fecharPDF(){
+  const f = document.getElementById('pdf-fundo'); if(f) f.remove();
+  if(PDF_URL){ const u = PDF_URL; PDF_URL = null; setTimeout(() => URL.revokeObjectURL(u), 60000); }
+  document.removeEventListener('keydown', escPDF);
+}
+function escPDF(ev){ if(ev.key === 'Escape') fecharPDF(); }
+function entregarPDF(doc, nomeArquivo, titulo){
+  fecharPDF();
+  const blob = doc.output('blob');
+  const arquivo = (() => { try{ return new File([blob], nomeArquivo, { type: 'application/pdf' }); }catch(e){ return null; } })();
+  PDF_URL = URL.createObjectURL(blob);
+  const podeCompartilhar = !!(arquivo && navigator.canShare && navigator.canShare({ files: [arquivo] }));
+  const celular = window.matchMedia('(max-width:768px)').matches;
+  const fundo = document.createElement('div');
+  fundo.id = 'pdf-fundo'; fundo.className = 'pix-fundo';
+  fundo.innerHTML = `<div class="pix-caixa pdf-caixa" role="dialog" aria-modal="true" aria-labelledby="pdf-tit">
+    <div class="pix-topo"><div><h2 id="pdf-tit">${esc(titulo)}</h2><div style="font-size:13px; color:var(--ink-soft);">Documento pronto. Escolha o que fazer:</div></div>
+    <button class="pix-fechar" aria-label="Fechar" onclick="fecharPDF()">×</button></div>
+    ${celular ? '' : `<iframe class="pdf-previa" src="${PDF_URL}" title="Pré-visualização do PDF"></iframe>`}
+    <div class="pdf-acoes">
+      <a class="btn btn-primary" href="${PDF_URL}" target="_blank" rel="noopener">Abrir / Imprimir</a>
+      <a class="btn btn-dark" href="${PDF_URL}" download="${esc(nomeArquivo)}">Baixar PDF</a>
+      ${podeCompartilhar ? '<button type="button" class="btn btn-outline" id="pdf-compartilhar">Compartilhar (WhatsApp…)</button>' : ''}
+    </div></div>`;
+  fundo.addEventListener('click', ev => { if(ev.target === fundo) fecharPDF(); });
+  document.body.appendChild(fundo);
+  document.addEventListener('keydown', escPDF);
+  const bt = document.getElementById('pdf-compartilhar');
+  if(bt) bt.addEventListener('click', () => navigator.share({ files: [arquivo], title: titulo }).catch(() => {}));
 }
 
 /* ======================================================
    GERAÇÃO DE PDF — RECIBO
    ====================================================== */
 async function gerarReciboPDF(loc){
+  if(typeof loc === 'string') loc = DB.locacoes.find(l => l.id === loc);
+  if(!loc){ toast('Locação não encontrada', false); return; }
   const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
   const { jsPDF } = window.jspdf;
@@ -2263,14 +2309,15 @@ async function gerarReciboPDF(loc){
   }catch(e){ console.error('QR code recibo', e); }
 
   desenharRodapePDF(doc);
-  doc.save(`recibo-${fmtNumero(loc).replace('/','-')}.pdf`);
-  toast('Recibo PDF gerado');
+  entregarPDF(doc, `recibo-${fmtNumero(loc).replace('/','-')}.pdf`, `Recibo da locação nº ${fmtNumero(loc)}`);
 }
 
 /* ======================================================
    TERMO DE RETIRADA / DEVOLUÇÃO (impressão para assinatura)
    ====================================================== */
 async function gerarTermoPDF(loc, tipo){
+  if(typeof loc === 'string') loc = DB.locacoes.find(l => l.id === loc);
+  if(!loc){ toast('Locação não encontrada', false); return; }
   // tipo: 'retirada' ou 'devolucao'
   const cliente = DB.clientes.find(c=>c.id===loc.cliente_id) || {};
   const itens = DB.itens_locacao.filter(i=>i.locacao_id===loc.id);
@@ -2348,8 +2395,7 @@ async function gerarTermoPDF(loc, tipo){
   }catch(e){ console.error('QR code termo', e); }
 
   desenharRodapePDF(doc);
-  doc.save(`termo-${tipo}-${fmtNumero(loc).replace('/','-')}.pdf`);
-  toast(`Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} gerado`);
+  entregarPDF(doc, `termo-${tipo}-${fmtNumero(loc).replace('/','-')}.pdf`, `Termo de ${tipo === 'retirada' ? 'retirada' : 'devolução'} nº ${fmtNumero(loc)}`);
 }
 
 /* ======================================================

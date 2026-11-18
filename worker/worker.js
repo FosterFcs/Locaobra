@@ -10,20 +10,23 @@
 const TABELAS = {
   clientes: ['tipo_pessoa','nome','documento','telefone','email','endereco','cidade','observacoes','status'],
   ferramentas: ['codigo','nome','categoria','foto_url','valor_diaria','valor_semanal','valor_mensal','valor_reposicao','quantidade_total','quantidade_disponivel','status','observacoes'],
-  locacoes: ['cliente_id','data_retirada','data_devolucao_prevista','data_devolucao_real','tipo_cobranca','valor_total','valor_caucao','valor_multa','status','observacoes'],
+  locacoes: ['cliente_id','data_retirada','data_devolucao_prevista','data_devolucao_real','tipo_cobranca','valor_total','valor_caucao','valor_multa','status','observacoes','local_entrega_id','endereco_entrega','forma_pagamento'],
   itens_locacao: ['locacao_id','ferramenta_id','quantidade','valor_unitario','subtotal'],
-  pagamentos: ['locacao_id','tipo','valor','forma_pagamento','data_pagamento','observacoes']
+  pagamentos: ['locacao_id','tipo','valor','forma_pagamento','data_pagamento','observacoes'],
+  // endereços de entrega / obras de cada cliente
+  locais_entrega: ['cliente_id','nome','endereco','bairro','cidade','cep','contato','telefone','observacoes','status']
 };
 
 // Referências que precisam pertencer à mesma empresa
 const REFERENCIAS = {
-  locacoes: { cliente_id: 'clientes' },
+  locacoes: { cliente_id: 'clientes', local_entrega_id: 'locais_entrega' },
   itens_locacao: { locacao_id: 'locacoes', ferramenta_id: 'ferramentas' },
-  pagamentos: { locacao_id: 'locacoes' }
+  pagamentos: { locacao_id: 'locacoes' },
+  locais_entrega: { cliente_id: 'clientes' }
 };
 
-const CAMPOS_EMPRESA = ['nome','cnpj','telefone','email','endereco','cidade','cor_primaria','logo'];
-const CAMPOS_EMPRESA_PUBLICOS = 'id, nome, cnpj, telefone, email, endereco, cidade, cor_primaria, logo, plano, teste_ate, assinatura_plano, assinatura_ciclo, assinatura_status, pago_ate, fatura_url, fundador, preco_travado_ate, pix_modo, pix_chave, pix_tipo, pix_nome, pix_cidade, loc_asaas_env';
+const CAMPOS_EMPRESA = ['nome','cnpj','telefone','email','endereco','cidade','cor_primaria','logo','formas_pagamento'];
+const CAMPOS_EMPRESA_PUBLICOS = 'id, nome, cnpj, telefone, email, endereco, cidade, cor_primaria, logo, plano, teste_ate, assinatura_plano, assinatura_ciclo, assinatura_status, pago_ate, fatura_url, fundador, preco_travado_ate, pix_modo, pix_chave, pix_tipo, pix_nome, pix_cidade, loc_asaas_env, formas_pagamento';
 const DIAS_TESTE = 14; // teste grátis (padrão de mercado: 7 a 15 dias)
 
 /* ---------------- planos e cobrança (Asaas) ---------------- */
@@ -271,7 +274,7 @@ async function webhookAsaas(request, env){
 async function conferirReferencias(env, tabela, item, empresaId){
   const refs = REFERENCIAS[tabela] || {};
   for(const [col, alvo] of Object.entries(refs)){
-    if(item[col] === undefined) continue;
+    if(item[col] === undefined || item[col] === null || item[col] === '') continue;
     const ok = await env.DB.prepare(`SELECT 1 AS ok FROM ${alvo} WHERE id = ?1 AND empresa_id = ?2`).bind(item[col], empresaId).first();
     if(!ok) throw new Erro(400, `Referência inválida: ${col}`);
   }
@@ -281,7 +284,7 @@ function traduzErroSQL(e){
   const m = String(e && e.message || e);
   if(m.includes('UNIQUE') && m.includes('ferramentas')) return new Erro(409, 'Já existe uma ferramenta com esse código');
   if(m.includes('UNIQUE') && m.includes('usuarios')) return new Erro(409, 'Já existe um usuário com esse e-mail');
-  if(m.includes('FOREIGN KEY')) return new Erro(409, 'Não é possível excluir: o registro está ligado a locações ou pagamentos');
+  if(m.includes('FOREIGN KEY')) return new Erro(409, 'Não é possível excluir: o registro está ligado a locações, pagamentos ou locais de entrega');
   if(m.includes('CHECK')) return new Erro(409, 'Estoque insuficiente');
   return e;
 }
@@ -486,6 +489,12 @@ async function rotear(request, env, url){
       if(b.logo !== undefined && b.logo !== null){
         if(!/^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(b.logo)) throw new Erro(400, 'Logo deve ser PNG, JPG, WEBP ou SVG');
         if(b.logo.length > 350000) throw new Erro(400, 'Logo muito grande (máx. ~250 KB)');
+      }
+      if(b.formas_pagamento !== undefined && b.formas_pagamento !== null){
+        let lista;
+        try{ lista = JSON.parse(b.formas_pagamento); }catch{ throw new Erro(400, 'Formas de pagamento inválidas'); }
+        if(!Array.isArray(lista) || lista.length > 30 || lista.some(f => typeof f !== 'string' || !f.trim() || f.length > 40))
+          throw new Erro(400, 'Formas de pagamento inválidas (até 30, com até 40 letras cada)');
       }
       const sets = campos.map((c,i) => `${c} = ?${i+1}`).join(', ');
       await env.DB.prepare(`UPDATE empresas SET ${sets} WHERE id = ?${campos.length + 1}`)
