@@ -60,9 +60,10 @@ header.top{position:sticky;top:0;z-index:20;background:var(--char);color:#fff}
 /* hero */
 .hero{background:linear-gradient(160deg,var(--char) 0%,var(--char-2) 100%);color:#fff;overflow:hidden;position:relative}
 .hero .wrap{display:grid;grid-template-columns:1.02fr 1fr;gap:48px;align-items:center;padding-top:64px;padding-bottom:72px}
-.selo{display:inline-flex;align-items:center;gap:8px;background:rgba(224,0,0,.14);border:1px solid rgba(224,0,0,.5);color:#FF8A8A;font-size:13px;font-weight:600;padding:6px 12px;border-radius:99px;margin-bottom:20px}
+.selo{display:inline-block;line-height:1.4;background:rgba(224,0,0,.14);border:1px solid rgba(224,0,0,.5);color:#FF8A8A;font-size:13px;font-weight:600;padding:6px 12px;border-radius:99px;margin-bottom:20px}
 .selo b{color:#fff}
-.hero h1{font-size:clamp(34px,5vw,54px);margin-bottom:18px}
+.hero h1{font-size:clamp(28px,5vw,54px);line-height:1.1;margin-bottom:18px;overflow-wrap:break-word}
+@media (max-width:480px){.hero h1{font-size:clamp(26px,7.6vw,34px)}.selo{font-size:12px;padding:6px 12px;border-radius:14px}}
 .hero h1 em{font-style:normal;color:var(--red)}
 .hero p.sub{font-size:18px;color:#C9CCD1;max-width:540px;margin-bottom:28px}
 .hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
@@ -245,7 +246,7 @@ footer .ass{color:#C9CCD1}
       <p>Feito para locadoras de ferramentas, andaimes e equipamentos de obra. Simples o bastante para usar no balcão e no celular.</p>
     </div>
     <div class="grid">
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div><h3>Documentos em PDF</h3><p>Contrato, recibo e termos de retirada e devolução com o logo, as cores e os dados da sua locadora.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div><h3>Documentos em PDF</h3><p>Contrato, recibo, ordem de serviço e termo de devolução com o logo, as cores e os dados da sua locadora.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></div><h3>Estoque automático</h3><p>Baixa na saída, volta na devolução. O sistema não deixa alugar o que não está na prateleira.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Atrasos e multa</h3><p>Devoluções atrasadas aparecem no painel e a multa por dia de atraso é calculada na hora de devolver.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg></div><h3>Lembrete por WhatsApp</h3><p>Um toque e a mensagem de devolução já vai pronta para o cliente, com as ferramentas e a data de devolução.</p></div>
@@ -280,7 +281,7 @@ footer .ass{color:#C9CCD1}
           <li>Logo e cor da sua locadora no cabeçalho</li>
           <li>Numeração automática (0001/26, 0002/26…)</li>
           <li>QR Code que abre o WhatsApp da sua loja</li>
-          <li>Recibo e termos de retirada e devolução</li>
+          <li>Recibo, ordem de serviço (O.S.) e termo de devolução</li>
         </ul>
       </div>
       <div class="img pdf"><img src="img/contrato.webp" width="700" height="990" alt="Exemplo de contrato de locação gerado pelo LocaObra"></div>

@@ -156,6 +156,8 @@ tr:hover td{background:#F2EFE8;}
 
 .pix-fundo{position:fixed; inset:0; background:rgba(20,20,22,.55); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow-y:auto;}
 .pix-caixa{background:#fff; border-radius:10px; width:100%; max-width:460px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.l-curto{display:none;}
+@media (max-width:768px){ .l-longo{display:none;} .l-curto{display:inline;} }
 .pdf-caixa{max-width:760px;}
 .sub-entrega{font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.3;}
 .chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
@@ -395,13 +397,13 @@ tr:hover td{background:#F2EFE8;}
     <nav>
       <button class="nav-btn active" data-view="dashboard"><span class="icon">▦</span><span class="label">Dashboard</span></button>
       <button class="nav-btn" data-view="clientes"><span class="icon">◆</span><span class="label">Clientes</span></button>
-      <button class="nav-btn" data-view="locais"><span class="icon">⌖</span><span class="label">Locais de entrega</span></button>
+      <button class="nav-btn" data-view="locais"><span class="icon">⌖</span><span class="label"><span class="l-longo">Locais de entrega</span><span class="l-curto">Locais</span></span></button>
       <button class="nav-btn" data-view="ferramentas"><span class="icon">▣</span><span class="label">Ferramentas</span></button>
-      <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
+      <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label"><span class="l-longo">Nova Locação</span><span class="l-curto">Nova</span></span></button>
       <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
-      <button class="nav-btn" data-view="relatorio"><span class="icon">▤</span><span class="label">Relatório do dia</span></button>
+      <button class="nav-btn" data-view="relatorio"><span class="icon">▤</span><span class="label"><span class="l-longo">Relatório do dia</span><span class="l-curto">Relatório</span></span></button>
       <button class="nav-btn" data-view="usuarios"><span class="icon">◈</span><span class="label">Usuários</span></button>
-      <button class="nav-btn admin-only" data-view="empresa"><span class="icon">⚙</span><span class="label">Minha empresa</span></button>
+      <button class="nav-btn admin-only" data-view="empresa"><span class="icon">⚙</span><span class="label"><span class="l-longo">Minha empresa</span><span class="l-curto">Empresa</span></span></button>
       <button class="nav-btn admin-only" data-view="plano"><span class="icon">★</span><span class="label">Plano</span></button>
     </nav>
     <div class="sidebar-footer">
