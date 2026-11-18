@@ -157,6 +157,11 @@ tr:hover td{background:#F2EFE8;}
 .pix-fundo{position:fixed; inset:0; background:rgba(20,20,22,.55); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow-y:auto;}
 .pix-caixa{background:#fff; border-radius:10px; width:100%; max-width:460px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.35);}
 .pdf-caixa{max-width:760px;}
+.sub-entrega{font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.3;}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+.chip{display:inline-flex; align-items:center; gap:6px; border:1.5px solid var(--line); border-radius:20px; padding:5px 6px 5px 12px; font-size:13px; font-weight:600; background:#fff;}
+.chip button{background:none; border:none; cursor:pointer; font-size:16px; line-height:1; color:var(--ink-soft); padding:0 4px;}
+.chip button:hover{color:var(--red);}
 .pdf-previa{width:100%; height:62vh; border:1px solid var(--line); border-radius:6px; margin-bottom:12px; background:#F7F5F0;}
 .pdf-acoes{display:flex; flex-wrap:wrap; gap:8px;}
 .pdf-acoes .btn{flex:1; min-width:150px; text-align:center; text-decoration:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; border-radius:var(--radius); padding:11px 18px; cursor:pointer;}
@@ -283,10 +288,11 @@ tr:hover td{background:#F2EFE8;}
     box-shadow:0 -4px 16px rgba(0,0,0,0.25);
   }
   .brand, .sidebar-footer{display:none;}
-  nav{display:flex; padding:4px; gap:2px;}
+  nav{display:flex; padding:4px; gap:2px; overflow-x:auto; scrollbar-width:none;}
+  nav::-webkit-scrollbar{display:none;}
   nav button{
     flex:1; flex-direction:column; justify-content:center; gap:3px;
-    padding:8px 2px; margin:0; font-size:9.5px; text-align:center; min-width:0;
+    padding:8px 2px; margin:0; font-size:9.5px; text-align:center; min-width:58px;
   }
   nav button.active{font-weight:600;}
   nav button span.label{display:block !important; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -389,6 +395,7 @@ tr:hover td{background:#F2EFE8;}
     <nav>
       <button class="nav-btn active" data-view="dashboard"><span class="icon">▦</span><span class="label">Dashboard</span></button>
       <button class="nav-btn" data-view="clientes"><span class="icon">◆</span><span class="label">Clientes</span></button>
+      <button class="nav-btn" data-view="locais"><span class="icon">⌖</span><span class="label">Locais de entrega</span></button>
       <button class="nav-btn" data-view="ferramentas"><span class="icon">▣</span><span class="label">Ferramentas</span></button>
       <button class="nav-btn" data-view="nova-locacao"><span class="icon">＋</span><span class="label">Nova Locação</span></button>
       <button class="nav-btn" data-view="locacoes"><span class="icon">☰</span><span class="label">Locações</span></button>
@@ -555,7 +562,8 @@ let DB = {
   ferramentas: [],
   locacoes: [],
   itens_locacao: [],
-  pagamentos: []
+  pagamentos: [],
+  locais_entrega: []
 };
 
 // Dados da locadora logada (preenchidos pelo servidor em aplicarEmpresa)
@@ -644,6 +652,9 @@ async function loadAll(){
       DB.locacoes = l.data || [];
       DB.itens_locacao = i.data || [];
       DB.pagamentos = p.data || [];
+      // locais de entrega (se o servidor ainda não tiver a tabela, segue sem eles)
+      const le = await supabaseClient.from('locais_entrega').select('*').order('criado_em',{ascending:false});
+      DB.locais_entrega = le.data || [];
     }catch(e){ console.error(e); toast('Erro ao carregar dados — usando modo local', false); }
   }
 }
@@ -652,7 +663,7 @@ async function loadAll(){
    NAVEGAÇÃO
    ====================================================== */
 const titles = {
-  dashboard:'Dashboard', clientes:'Clientes', ferramentas:'Ferramentas',
+  dashboard:'Dashboard', clientes:'Clientes', locais:'Locais de entrega / obras', ferramentas:'Ferramentas',
   'nova-locacao':'Nova Locação', locacoes:'Locações', usuarios:'Usuários', empresa:'Minha empresa', plano:'Plano e pagamento'
 };
 document.querySelectorAll('.nav-btn').forEach(btn=>{
@@ -687,6 +698,7 @@ async function render(view){
   await loadAll();
   if(view === 'dashboard') renderDashboard(el);
   else if(view === 'clientes') renderClientes(el);
+  else if(view === 'locais') renderLocais(el);
   else if(view === 'ferramentas') renderFerramentas(el);
   else if(view === 'nova-locacao') renderNovaLocacao(el);
   else if(view === 'locacoes') renderLocacoes(el);
@@ -1355,6 +1367,11 @@ function renderNovaLocacao(el){
         <div class="field"><label>Data de retirada</label><input id="loc-retirada" type="date" value="${todayISO()}"></div>
         <div class="field"><label>Data de devolução prevista</label><input id="loc-devolucao" type="date"></div>
       </div>
+      <div class="field"><label for="loc-local">Local de entrega / obra</label><select id="loc-local"></select></div>
+      <div id="loc-novo-local" class="hidden" style="border:1.5px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:12px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Novo local de entrega (fica salvo no cadastro do cliente)</div>
+        ${camposLocalHTML('nl')}
+      </div>
     </div>
 
     <div class="panel">
@@ -1368,13 +1385,21 @@ function renderNovaLocacao(el){
     </div>
 
     <div class="panel">
-      <h2>3. Caução (opcional)</h2>
-      <div class="field"><label>Valor de caução (R$)</label><input id="loc-caucao" type="number" step="0.01" value="0"></div>
+      <h2>3. Pagamento e caução</h2>
+      <div class="row">
+        <div class="field"><label for="loc-forma">Forma de pagamento</label><select id="loc-forma">${opcoesFormas('')}</select></div>
+        <div class="field"><label for="loc-caucao">Valor de caução (R$)</label><input id="loc-caucao" type="number" step="0.01" value="0"></div>
+      </div>
+      <div class="field"><label for="loc-obs">Observações do contrato (opcional)</label><textarea id="loc-obs" rows="2" placeholder="Ex.: entrega até 8h, falar com o mestre de obras"></textarea></div>
     </div>
 
     <div id="resumo"></div>
   `;
 
+  const selCli = document.getElementById('loc-cliente');
+  selCli.addEventListener('change', () => preencherLocais('loc-local', selCli.value, ''));
+  preencherLocais('loc-local', selCli.value, '');
+  document.getElementById('loc-local').addEventListener('change', ev => document.getElementById('loc-novo-local').classList.toggle('hidden', ev.target.value !== '__novo'));
   document.getElementById('loc-tipo').addEventListener('change', calcularResumo);
   document.getElementById('loc-devolucao').addEventListener('change', calcularResumo);
   document.getElementById('loc-retirada').addEventListener('change', calcularResumo);
@@ -1487,6 +1512,21 @@ async function salvarLocacao(){
   const devolucao = document.getElementById('loc-devolucao').value;
   const caucao = Number(document.getElementById('loc-caucao').value || 0);
   const {dias} = calcularPeriodo();
+  const forma = document.getElementById('loc-forma').value;
+  const obs = document.getElementById('loc-obs').value.trim();
+
+  // local de entrega
+  let localSel = document.getElementById('loc-local').value;
+  if(localSel === '__novo'){
+    const novo = lerCamposLocal('nl');
+    if(!novo.nome || !novo.endereco){ toast('Preencha o nome e o endereço do novo local de entrega', false); return; }
+    novo.cliente_id = clienteId;
+    const r = await supabaseClient.from('locais_entrega').insert(novo).select().single();
+    if(r.error){ toast(r.error.message || 'Erro ao salvar o local de entrega', false); return; }
+    DB.locais_entrega.unshift(r.data);
+    localSel = r.data.id;
+  }
+  const entrega = resolverEntrega(localSel, clienteId);
 
   const locacaoObj = {
     cliente_id: clienteId,
@@ -1495,7 +1535,11 @@ async function salvarLocacao(){
     tipo_cobranca: tipo,
     valor_total: window._locTotal || 0,
     valor_caucao: caucao,
-    status: 'ativa'
+    status: 'ativa',
+    local_entrega_id: entrega.local_entrega_id,
+    endereco_entrega: entrega.endereco_entrega,
+    forma_pagamento: forma || null,
+    observacoes: obs || null
   };
 
   let locacaoId, numero;
@@ -1515,7 +1559,7 @@ async function salvarLocacao(){
       toast((e2.message || 'Erro ao gravar itens') + ' — confira o estoque e a locação nº ' + numero, false);
     }
     if(caucao > 0){
-      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento:'a definir'});
+      await supabaseClient.from('pagamentos').insert({locacao_id: locacaoId, tipo:'caucao', valor: caucao, forma_pagamento: forma || 'a definir'});
     }
   } else {
     locacaoId = uid(); numero = DB.locacoes.length + 1;
@@ -1586,12 +1630,14 @@ function tableLocacoesCompleta(list){
         '<span class="badge badge-ok">Ativa</span>';
       return `<tr>
         <td class="mono">#${fmtNumero(l)}</td>
-        <td>${cliente?cliente.nome:'—'}</td>
+        <td>${esc(cliente?cliente.nome:'—')}${l.endereco_entrega ? `<div class="sub-entrega">📍 ${esc(l.endereco_entrega)}</div>` : ''}</td>
         <td>${fmtDate(l.data_retirada)}</td>
         <td>${fmtDate(l.data_devolucao_prevista)}</td>
-        <td class="mono">${fmtMoney(l.valor_total)}</td>
+        <td class="mono">${fmtMoney(l.valor_total)}${(()=>{ const sd = saldoLocacao(l); return sd > 0 && l.status!=='cancelada' ? `<div class="sub-entrega">a receber ${fmtMoney(sd)}</div>` : '<div class="sub-entrega" style="color:var(--green)">quitado</div>'; })()}</td>
         <td>${badge}</td>
         <td class="actions-cell">
+          ${l.status!=='cancelada' ? `<button class="btn btn-primary btn-sm" onclick="abrirReceber('${l.id}')">Receber</button>` : ''}
+          ${l.status!=='cancelada' ? `<button class="btn btn-outline btn-sm" onclick="abrirEditarLocacao('${l.id}')">Editar</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF('${l.id}')">Contrato</button>
           <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF('${l.id}')">Recibo</button>
           <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'retirada')">Termo Retirada</button>
@@ -1792,6 +1838,7 @@ function renderEmpresa(el){
         </div>
       </div>
     </div>
+    ${painelFormas()}
     ${painelPix(e)}`;
 
   document.getElementById('form-empresa').addEventListener('submit', async (ev) => {
@@ -1812,6 +1859,366 @@ function renderEmpresa(el){
   const rem = document.getElementById('remover-logo');
   if(rem) rem.addEventListener('click', () => salvarEmpresa({ logo: null }));
   ligarPainelPix(e);
+}
+
+/* ======================================================
+   FORMAS DE PAGAMENTO (cada locadora monta a sua lista)
+   ====================================================== */
+const FORMAS_PADRAO = ['Dinheiro', 'Pix', 'Cartão de débito', 'Cartão de crédito', 'Boleto', 'Transferência (TED)', 'Faturado (a prazo)'];
+function formasPagamento(){
+  try{
+    const l = JSON.parse(EMPRESA.formas_pagamento || 'null');
+    if(Array.isArray(l) && l.length) return l;
+  }catch(e){}
+  return FORMAS_PADRAO.slice();
+}
+function opcoesFormas(atual){
+  const lista = formasPagamento();
+  if(atual && !lista.includes(atual)) lista.push(atual);
+  return `<option value="">A combinar</option>` + lista.map(f => `<option value="${esc(f)}" ${f === atual ? 'selected' : ''}>${esc(f)}</option>`).join('');
+}
+function painelFormas(){
+  const lista = formasPagamento();
+  return `<div class="panel" id="painel-formas">
+    <h2>Formas de pagamento</h2>
+    <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">As formas que sua locadora aceita. Aparecem na nova locação, no botão <b>Receber</b> e no recibo. Uma locação pode ser paga em várias formas (ex.: parte no Pix, parte no cartão).</div>
+    <div class="chips" id="formas-chips">${lista.map((f, i) => `<span class="chip">${esc(f)}<button type="button" aria-label="Remover ${esc(f)}" onclick="removerForma(${i})">×</button></span>`).join('')}</div>
+    <div class="item-row">
+      <input id="forma-nova" maxlength="40" placeholder="Adicionar outra (ex.: Cheque, Cartão 3x, Permuta)">
+      <button type="button" class="btn btn-dark btn-sm" onclick="adicionarForma()">Adicionar</button>
+    </div>
+    <div class="actions-cell" style="margin-top:10px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="restaurarFormas()">Voltar ao padrão</button>
+    </div>
+  </div>`;
+}
+async function salvarFormas(lista){
+  const resp = await apiFetch('/api/empresa', { method: 'PATCH', body: JSON.stringify({ formas_pagamento: JSON.stringify(lista) }) });
+  if(!resp.ok){ toast(resp.data?.message || 'Erro ao salvar as formas de pagamento', false); return; }
+  aplicarEmpresa(resp.data);
+  if(!resp.data || resp.data.formas_pagamento === undefined){ toast('O servidor ainda não foi atualizado para guardar as formas de pagamento', false); return; }
+  toast('Formas de pagamento salvas');
+  const pn = document.getElementById('painel-formas'); if(pn) pn.outerHTML = painelFormas();
+}
+function adicionarForma(){
+  const inp = document.getElementById('forma-nova');
+  const v = inp.value.trim();
+  if(!v) return;
+  const lista = formasPagamento();
+  if(lista.some(f => f.toLowerCase() === v.toLowerCase())){ toast('Essa forma já está na lista', false); return; }
+  if(lista.length >= 30){ toast('Máximo de 30 formas', false); return; }
+  lista.push(v); salvarFormas(lista);
+}
+function removerForma(i){
+  const lista = formasPagamento();
+  if(lista.length <= 1){ toast('Deixe ao menos uma forma de pagamento', false); return; }
+  lista.splice(i, 1); salvarFormas(lista);
+}
+function restaurarFormas(){ if(confirm('Voltar para a lista padrão de formas de pagamento?')) salvarFormas(FORMAS_PADRAO.slice()); }
+
+/* ======================================================
+   LOCAIS DE ENTREGA / OBRAS
+   ====================================================== */
+function camposLocalHTML(px, l = {}){
+  return `
+    <div class="row">
+      <div class="field"><label for="${px}-nome">Nome do local / obra</label><input id="${px}-nome" maxlength="80" value="${esc(l.nome)}" placeholder="Ex.: Obra Residencial Alphaville"></div>
+      <div class="field"><label for="${px}-cep">CEP</label><input id="${px}-cep" maxlength="9" value="${esc(l.cep)}" placeholder="00000-000"></div>
+    </div>
+    <div class="field"><label for="${px}-end">Endereço (rua, número, complemento)</label><input id="${px}-end" maxlength="160" value="${esc(l.endereco)}"></div>
+    <div class="row">
+      <div class="field"><label for="${px}-bairro">Bairro</label><input id="${px}-bairro" maxlength="60" value="${esc(l.bairro)}"></div>
+      <div class="field"><label for="${px}-cidade">Cidade</label><input id="${px}-cidade" maxlength="60" value="${esc(l.cidade)}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="${px}-contato">Quem recebe na obra</label><input id="${px}-contato" maxlength="60" value="${esc(l.contato)}" placeholder="Ex.: Sr. João (mestre de obras)"></div>
+      <div class="field"><label for="${px}-tel">Telefone do local</label><input id="${px}-tel" maxlength="20" value="${esc(l.telefone)}"></div>
+    </div>`;
+}
+function lerCamposLocal(px){
+  const v = id => (document.getElementById(`${px}-${id}`)?.value || '').trim();
+  return { nome: v('nome'), endereco: v('end'), bairro: v('bairro'), cidade: v('cidade'), cep: v('cep'), contato: v('contato'), telefone: v('tel') };
+}
+function enderecoLocal(l){
+  return [l.endereco, l.bairro, l.cidade, l.cep ? 'CEP ' + l.cep : ''].filter(Boolean).join(' — ');
+}
+// opções: retirada na loja, endereço do cadastro, obras do cliente, novo local
+function preencherLocais(selId, clienteId, atual){
+  const sel = document.getElementById(selId); if(!sel) return;
+  const cli = DB.clientes.find(c => c.id === clienteId);
+  const locais = DB.locais_entrega.filter(l => l.cliente_id === clienteId && l.status !== 'inativo');
+  sel.innerHTML = `
+    <option value="loja">Cliente retira na loja</option>
+    <option value="cadastro">Endereço do cadastro do cliente${cli && cli.endereco ? ' — ' + esc(cli.endereco) : ''}</option>
+    ${locais.map(l => `<option value="${l.id}">📍 ${esc(l.nome)} — ${esc(enderecoLocal(l))}</option>`).join('')}
+    <option value="__novo">＋ Cadastrar novo local de entrega…</option>`;
+  sel.value = atual || (locais[0] ? locais[0].id : 'loja');
+  if(!sel.value) sel.value = 'loja';
+}
+function resolverEntrega(valor, clienteId){
+  if(valor === 'cadastro'){
+    const cli = DB.clientes.find(c => c.id === clienteId) || {};
+    return { local_entrega_id: null, endereco_entrega: 'Endereço do cadastro: ' + ([cli.endereco, cli.cidade].filter(Boolean).join(' — ') || 'não informado') };
+  }
+  const l = DB.locais_entrega.find(x => x.id === valor);
+  if(l){
+    const extra = [l.contato ? 'Recebe: ' + l.contato : '', l.telefone ? 'Tel: ' + l.telefone : ''].filter(Boolean).join(' · ');
+    return { local_entrega_id: l.id, endereco_entrega: `${l.nome}: ${enderecoLocal(l)}${extra ? ' (' + extra + ')' : ''}` };
+  }
+  return { local_entrega_id: null, endereco_entrega: 'Retirada na loja pelo cliente' };
+}
+function valorSelecaoEntrega(loc){
+  if(loc.local_entrega_id) return loc.local_entrega_id;
+  if(String(loc.endereco_entrega || '').startsWith('Endereço do cadastro')) return 'cadastro';
+  return 'loja';
+}
+function textoEntrega(loc, cliente){
+  return loc.endereco_entrega || 'Não informado';
+}
+
+function renderLocais(el){
+  const opCli = DB.clientes.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  el.innerHTML = `
+    ${configNote()}
+    <div class="grid grid-2">
+      <div class="panel">
+        <h2 id="local-titulo">Novo local de entrega</h2>
+        <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Cadastre as obras e endereços de entrega de cada cliente. Um cliente pode ter vários. Na nova locação é só escolher.</div>
+        <form id="form-local">
+          <input type="hidden" id="le-id" value="">
+          <div class="field"><label for="le-cliente">Cliente</label><select id="le-cliente" required>${opCli || '<option value="">Cadastre um cliente primeiro</option>'}</select></div>
+          ${camposLocalHTML('le')}
+          <div class="field"><label for="le-obs">Observações</label><textarea id="le-obs" rows="2" placeholder="Ex.: portão lateral, entregar até 8h"></textarea></div>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" id="le-btn">Cadastrar local</button>
+            <button type="button" class="btn btn-outline hidden" id="le-cancelar" onclick="render('locais')">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Locais cadastrados <span class="tag">${DB.locais_entrega.length}</span></h2>
+        <div class="field"><input id="busca-local" placeholder="Buscar por cliente, obra ou endereço..." oninput="filtrarLocais()"></div>
+        <div id="lista-locais">${listaLocaisHTML(DB.locais_entrega)}</div>
+      </div>
+    </div>`;
+  document.getElementById('form-local').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const id = document.getElementById('le-id').value;
+    const dados = { ...lerCamposLocal('le'), cliente_id: document.getElementById('le-cliente').value, observacoes: document.getElementById('le-obs').value.trim() };
+    if(!dados.cliente_id){ toast('Escolha o cliente', false); return; }
+    if(!dados.nome || !dados.endereco){ toast('Preencha o nome do local e o endereço', false); return; }
+    const r = id ? await supabaseClient.from('locais_entrega').update(dados).eq('id', id)
+                 : await supabaseClient.from('locais_entrega').insert(dados);
+    if(r.error){ toast(r.error.message || 'Erro ao salvar o local', false); return; }
+    toast(id ? 'Local atualizado' : 'Local de entrega cadastrado');
+    render('locais');
+  });
+}
+function listaLocaisHTML(list){
+  if(!list.length) return `<div class="empty"><div class="display">Nenhum local cadastrado</div></div>`;
+  return `<table><thead><tr><th>Cliente</th><th>Local / obra</th><th>Endereço</th><th>Ações</th></tr></thead><tbody>
+    ${list.map(l => { const c = DB.clientes.find(x => x.id === l.cliente_id); return `<tr>
+      <td>${esc(c ? c.nome : '—')}</td>
+      <td><b>${esc(l.nome)}</b>${l.contato ? `<div class="sub-entrega">Recebe: ${esc(l.contato)}${l.telefone ? ' · ' + esc(l.telefone) : ''}</div>` : ''}</td>
+      <td>${esc(enderecoLocal(l))}</td>
+      <td class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="editarLocal('${l.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirLocal('${l.id}')">Excluir</button>
+      </td></tr>`; }).join('')}
+  </tbody></table>`;
+}
+function filtrarLocais(){
+  const t = document.getElementById('busca-local').value.toLowerCase();
+  const f = DB.locais_entrega.filter(l => { const c = DB.clientes.find(x => x.id === l.cliente_id);
+    return [(c && c.nome), l.nome, enderecoLocal(l), l.contato].join(' ').toLowerCase().includes(t); });
+  document.getElementById('lista-locais').innerHTML = listaLocaisHTML(f);
+}
+function editarLocal(id){
+  const l = DB.locais_entrega.find(x => x.id === id); if(!l) return;
+  document.getElementById('le-id').value = l.id;
+  document.getElementById('le-cliente').value = l.cliente_id;
+  const m = { nome: 'nome', end: 'endereco', bairro: 'bairro', cidade: 'cidade', cep: 'cep', contato: 'contato', tel: 'telefone' };
+  Object.entries(m).forEach(([k, c]) => document.getElementById('le-' + k).value = l[c] || '');
+  document.getElementById('le-obs').value = l.observacoes || '';
+  document.getElementById('local-titulo').textContent = 'Editar local de entrega';
+  document.getElementById('le-btn').textContent = 'Salvar alterações';
+  document.getElementById('le-cancelar').classList.remove('hidden');
+  document.getElementById('form-local').scrollIntoView({ behavior: 'smooth' });
+}
+async function excluirLocal(id){
+  if(!confirm('Excluir este local de entrega? As locações antigas continuam com o endereço gravado.')) return;
+  // desvincula das locações antes de excluir
+  for(const l of DB.locacoes.filter(x => x.local_entrega_id === id)){
+    await supabaseClient.from('locacoes').update({ local_entrega_id: null }).eq('id', l.id);
+  }
+  const r = await supabaseClient.from('locais_entrega').delete().eq('id', id);
+  if(r.error){ toast(r.error.message || 'Erro ao excluir', false); return; }
+  toast('Local excluído');
+  render('locais');
+}
+
+/* ======================================================
+   RECEBER (vários pagamentos, em várias formas)
+   ====================================================== */
+function fecharModal(id){ const f = document.getElementById(id); if(f) f.remove(); }
+function abrirModal(id, titulo, sub, corpo){
+  fecharModal(id);
+  const fundo = document.createElement('div');
+  fundo.id = id; fundo.className = 'pix-fundo';
+  fundo.innerHTML = `<div class="pix-caixa" role="dialog" aria-modal="true" aria-labelledby="${id}-tit">
+    <div class="pix-topo"><div><h2 id="${id}-tit">${titulo}</h2><div style="font-size:13px; color:var(--ink-soft);">${sub}</div></div>
+    <button class="pix-fechar" aria-label="Fechar" onclick="fecharModal('${id}')">×</button></div>
+    <div>${corpo}</div></div>`;
+  fundo.addEventListener('click', ev => { if(ev.target === fundo) fecharModal(id); });
+  fundo.addEventListener('keydown', ev => { if(ev.key === 'Escape') fecharModal(id); });
+  document.body.appendChild(fundo);
+  return fundo;
+}
+function abrirReceber(locId){
+  const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
+  const cli = DB.clientes.find(c => c.id === loc.cliente_id);
+  const pags = DB.pagamentos.filter(p => p.locacao_id === loc.id && p.tipo === 'pagamento');
+  const total = Number(loc.valor_total || 0) + Number(loc.valor_multa || 0);
+  const pago = pags.reduce((t, p) => t + Number(p.valor || 0), 0);
+  const saldo = saldoLocacao(loc);
+  const hist = pags.length ? `<div class="pix-hist"><b>Pagamentos registrados</b>${pags.map(p => `<div><span>${fmtDate(String(p.data_pagamento||'').slice(0,10))} · ${esc(p.forma_pagamento || '-')}${p.observacoes ? ' · ' + esc(p.observacoes) : ''}</span>
+      <span class="mono">${fmtMoney(p.valor)} ${PAPEL === 'admin' ? `<button class="pix-fechar" style="font-size:18px" title="Excluir pagamento" onclick="excluirPagamento('${p.id}', '${loc.id}')">×</button>` : ''}</span></div>`).join('')}</div>` : '';
+  const formaPadrao = loc.forma_pagamento || '';
+  const fundo = abrirModal('rec-fundo', 'Receber pagamento', `Locação #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
+    <div class="row" style="text-align:center; margin-bottom:12px;">
+      <div><div style="font-size:12px; color:var(--ink-soft)">Total${loc.valor_multa > 0 ? ' + multa' : ''}</div><div class="mono"><b>${fmtMoney(total)}</b></div></div>
+      <div><div style="font-size:12px; color:var(--ink-soft)">Recebido</div><div class="mono" style="color:var(--green)"><b>${fmtMoney(pago)}</b></div></div>
+      <div><div style="font-size:12px; color:var(--ink-soft)">Em aberto</div><div class="mono" style="color:${saldo > 0 ? 'var(--red)' : 'var(--green)'}"><b>${fmtMoney(saldo)}</b></div></div>
+    </div>
+    <form id="form-receber">
+      <div class="row">
+        <div class="field"><label for="rec-valor">Valor recebido (R$)</label><input id="rec-valor" type="number" step="0.01" min="0.01" required value="${saldo > 0 ? saldo.toFixed(2) : ''}"></div>
+        <div class="field"><label for="rec-forma">Forma</label><select id="rec-forma" required>${formasPagamento().concat(formaPadrao && !formasPagamento().includes(formaPadrao) ? [formaPadrao] : []).map(f => `<option ${f === formaPadrao ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="rec-data">Data</label><input id="rec-data" type="date" value="${todayISO()}"></div>
+        <div class="field"><label for="rec-obs">Observação</label><input id="rec-obs" maxlength="80" placeholder="Ex.: sinal, 2ª parcela, cartão 3x"></div>
+      </div>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin:-4px 0 10px;">Pode registrar em partes e em formas diferentes (ex.: R$ 500 no Pix + o resto no cartão).</div>
+      <div class="actions-cell">
+        <button type="submit" class="btn btn-primary">Registrar recebimento</button>
+        ${EMPRESA.pix_modo ? `<button type="button" class="btn btn-dark" onclick="fecharModal('rec-fundo'); abrirPix('${loc.id}')">Gerar QR Code Pix</button>` : ''}
+        ${pags.length ? `<button type="button" class="btn btn-outline" onclick="gerarReciboPDF('${loc.id}')">Recibo</button>` : ''}
+      </div>
+    </form>${hist}`);
+  fundo.querySelector('#form-receber').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true;
+    const valor = Math.round(Number(document.getElementById('rec-valor').value) * 100) / 100;
+    if(!(valor > 0)){ toast('Informe o valor', false); btn.disabled = false; return; }
+    const r = await supabaseClient.from('pagamentos').insert({
+      locacao_id: loc.id, tipo: 'pagamento', valor, forma_pagamento: document.getElementById('rec-forma').value,
+      data_pagamento: document.getElementById('rec-data').value || todayISO(), observacoes: document.getElementById('rec-obs').value.trim() || null });
+    if(r.error){ toast(r.error.message || 'Erro ao registrar', false); btn.disabled = false; return; }
+    toast(`Recebimento de ${fmtMoney(valor)} registrado`);
+    await loadAll();
+    abrirReceber(loc.id);
+    const lista = document.getElementById('lista-locacoes'); if(lista) filtrarLocacoes();
+  });
+}
+async function excluirPagamento(pagId, locId){
+  if(!confirm('Excluir este pagamento registrado?')) return;
+  const r = await supabaseClient.from('pagamentos').delete().eq('id', pagId);
+  if(r.error){ toast(r.error.message || 'Erro ao excluir', false); return; }
+  toast('Pagamento excluído');
+  await loadAll(); abrirReceber(locId);
+  const lista = document.getElementById('lista-locacoes'); if(lista) filtrarLocacoes();
+}
+
+/* ======================================================
+   EDITAR LOCAÇÃO (datas, valores, local, forma, observações)
+   ====================================================== */
+let EDIT_RECALC = null;
+function abrirEditarLocacao(locId){
+  const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
+  const cli = DB.clientes.find(c => c.id === loc.cliente_id);
+  EDIT_RECALC = null;
+  const fundo = abrirModal('edit-fundo', 'Editar locação', `Contrato #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
+    <form id="form-editar">
+      <div class="row">
+        <div class="field"><label for="ed-retirada">Data de retirada</label><input id="ed-retirada" type="date" required value="${esc(loc.data_retirada)}"></div>
+        <div class="field"><label for="ed-devolucao">Devolução prevista</label><input id="ed-devolucao" type="date" required value="${esc(loc.data_devolucao_prevista)}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="ed-tipo">Tipo de cobrança</label><select id="ed-tipo">
+          ${['diaria','semanal','mensal'].map(t => `<option value="${t}" ${loc.tipo_cobranca === t ? 'selected' : ''}>${{diaria:'Diária',semanal:'Semanal',mensal:'Mensal'}[t]}</option>`).join('')}</select></div>
+        <div class="field"><label for="ed-forma">Forma de pagamento</label><select id="ed-forma">${opcoesFormas(loc.forma_pagamento || '')}</select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="ed-total">Valor total (R$)</label><input id="ed-total" type="number" step="0.01" min="0" required value="${Number(loc.valor_total || 0).toFixed(2)}"></div>
+        <div class="field"><label for="ed-caucao">Caução (R$)</label><input id="ed-caucao" type="number" step="0.01" min="0" value="${Number(loc.valor_caucao || 0).toFixed(2)}"></div>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" style="margin:-4px 0 12px" onclick="recalcularEdicao('${loc.id}')">Recalcular valor pelas novas datas</button>
+      <div class="field"><label for="ed-local">Local de entrega / obra</label><select id="ed-local"></select></div>
+      <div id="ed-novo-local" class="hidden" style="border:1.5px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:12px;">${camposLocalHTML('el')}</div>
+      <div class="field"><label for="ed-obs">Observações do contrato</label><textarea id="ed-obs" rows="2">${esc(loc.observacoes || '')}</textarea></div>
+      <div class="actions-cell">
+        <button type="submit" class="btn btn-primary">Salvar e gerar novo contrato</button>
+        <button type="button" class="btn btn-outline" onclick="fecharModal('edit-fundo')">Cancelar</button>
+      </div>
+      <div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">Para trocar ou incluir ferramentas, faça uma nova locação (o estoque é controlado por item).</div>
+    </form>`);
+  preencherLocais('ed-local', loc.cliente_id, valorSelecaoEntrega(loc));
+  document.getElementById('ed-local').addEventListener('change', ev => document.getElementById('ed-novo-local').classList.toggle('hidden', ev.target.value !== '__novo'));
+  ['ed-retirada','ed-devolucao','ed-tipo'].forEach(id => document.getElementById(id).addEventListener('change', () => {
+    document.getElementById('ed-total').style.outline = '2px solid var(--amber)';
+  }));
+  fundo.querySelector('#form-editar').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true;
+    const ret = document.getElementById('ed-retirada').value, dev = document.getElementById('ed-devolucao').value;
+    if(dev < ret){ toast('A devolução não pode ser antes da retirada', false); btn.disabled = false; return; }
+    let localSel = document.getElementById('ed-local').value;
+    if(localSel === '__novo'){
+      const novo = lerCamposLocal('el');
+      if(!novo.nome || !novo.endereco){ toast('Preencha o nome e o endereço do novo local', false); btn.disabled = false; return; }
+      novo.cliente_id = loc.cliente_id;
+      const rl = await supabaseClient.from('locais_entrega').insert(novo).select().single();
+      if(rl.error){ toast(rl.error.message || 'Erro ao salvar o local', false); btn.disabled = false; return; }
+      DB.locais_entrega.unshift(rl.data); localSel = rl.data.id;
+    }
+    const entrega = resolverEntrega(localSel, loc.cliente_id);
+    const dados = {
+      data_retirada: ret, data_devolucao_prevista: dev, tipo_cobranca: document.getElementById('ed-tipo').value,
+      valor_total: Math.round(Number(document.getElementById('ed-total').value || 0) * 100) / 100,
+      valor_caucao: Math.round(Number(document.getElementById('ed-caucao').value || 0) * 100) / 100,
+      forma_pagamento: document.getElementById('ed-forma').value || null,
+      observacoes: document.getElementById('ed-obs').value.trim() || null,
+      local_entrega_id: entrega.local_entrega_id, endereco_entrega: entrega.endereco_entrega
+    };
+    const r = await supabaseClient.from('locacoes').update(dados).eq('id', loc.id);
+    if(r.error){ toast(r.error.message || 'Erro ao salvar', false); btn.disabled = false; return; }
+    // se recalculou, atualiza também o valor de cada item (aparece no contrato)
+    if(EDIT_RECALC && EDIT_RECALC.locId === loc.id && Math.abs(EDIT_RECALC.total - dados.valor_total) < 0.01){
+      for(const it of EDIT_RECALC.itens) await supabaseClient.from('itens_locacao').update({ valor_unitario: it.valor_unitario, subtotal: it.subtotal }).eq('id', it.id);
+    }
+    toast('Locação atualizada');
+    fecharModal('edit-fundo');
+    await loadAll();
+    const lista = document.getElementById('lista-locacoes'); if(lista) filtrarLocacoes();
+    gerarContratoPDF(loc.id);
+  });
+}
+function recalcularEdicao(locId){
+  const ret = document.getElementById('ed-retirada').value, dev = document.getElementById('ed-devolucao').value;
+  const tipo = document.getElementById('ed-tipo').value;
+  if(!ret || !dev){ toast('Preencha as duas datas', false); return; }
+  const dias = Math.max(1, Math.round((new Date(dev) - new Date(ret)) / 86400000));
+  const itens = DB.itens_locacao.filter(i => i.locacao_id === locId).map(i => {
+    const f = DB.ferramentas.find(x => x.id === i.ferramenta_id);
+    const vu = Math.round(calcularItemValor(f, tipo, dias) * 100) / 100;
+    return { id: i.id, valor_unitario: vu, subtotal: Math.round(vu * i.quantidade * 100) / 100 };
+  });
+  const total = Math.round(itens.reduce((t, i) => t + i.subtotal, 0) * 100) / 100;
+  EDIT_RECALC = { locId, itens, total };
+  const campo = document.getElementById('ed-total');
+  campo.value = total.toFixed(2); campo.style.outline = '';
+  toast(`Novo valor: ${fmtMoney(total)} (${dias} dia(s), cobrança ${tipo})`);
 }
 
 /* ======================================================
@@ -2151,7 +2558,9 @@ async function gerarContratoPDF(loc){
   doc.text(`Nome: ${cliente.nome || '-'}`, 15, y); y+=5;
   doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=5;
   doc.text(`Telefone: ${cliente.telefone || '-'}`, 15, y); y+=5;
-  doc.text(`Endereço: ${cliente.endereco || '-'}`, 15, y); y+=10;
+  doc.text(`Endereço: ${cliente.endereco || '-'}`, 15, y); y+=5;
+  const entregaC = doc.splitTextToSize(`Local de entrega / obra: ${textoEntrega(loc, cliente)}`, 180);
+  doc.text(entregaC, 15, y); y+= entregaC.length*5 + 5;
 
   doc.setFont('helvetica','bold'); doc.text('OBJETO DA LOCAÇÃO', 15, y); y+=6;
   doc.setFont('helvetica','normal');
@@ -2169,8 +2578,10 @@ async function gerarContratoPDF(loc){
     `Data prevista de devolução: ${fmtDate(loc.data_devolucao_prevista)}`,
     `Tipo de cobrança: ${loc.tipo_cobranca}`,
     `Valor total da locação: ${fmtMoney(loc.valor_total)}`,
-    `Valor de caução: ${fmtMoney(loc.valor_caucao)}`
+    `Valor de caução: ${fmtMoney(loc.valor_caucao)}`,
+    `Forma de pagamento: ${loc.forma_pagamento || 'a combinar'}`
   ];
+  if(loc.observacoes) cond.push(...doc.splitTextToSize(`Observações: ${loc.observacoes}`, 180));
   cond.forEach(c=>{ doc.text(c, 15, y); y+=5; });
   y+=8;
 
@@ -2284,6 +2695,13 @@ async function gerarReciboPDF(loc){
   doc.text(`Período: ${fmtDate(loc.data_retirada)} a ${fmtDate(loc.data_devolucao_prevista)} (cobrança ${loc.tipo_cobranca})`, 15, y); y+=7;
   doc.text(`Caução recebida: ${fmtMoney(loc.valor_caucao)}`, 15, y);
   if(loc.valor_multa > 0){ y+=7; doc.text(`Multa por atraso: ${fmtMoney(loc.valor_multa)}`, 15, y); }
+  const pagsRecibo = DB.pagamentos.filter(p => p.locacao_id === loc.id && p.tipo === 'pagamento');
+  if(pagsRecibo.length){
+    y+=10; doc.setFont('helvetica','bold'); doc.text('Pagamentos recebidos:', 15, y); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    pagsRecibo.forEach(p => { y+=5.5; doc.text(`• ${fmtDate(String(p.data_pagamento||'').slice(0,10))} — ${p.forma_pagamento || '-'} — ${fmtMoney(p.valor)}`, 18, y); });
+    doc.setFontSize(11); y+=7;
+    doc.text(`Saldo em aberto: ${fmtMoney(saldoLocacao(loc))}`, 15, y);
+  } else if(loc.forma_pagamento){ y+=7; doc.text(`Forma de pagamento: ${loc.forma_pagamento}`, 15, y); }
   y+=20;
 
   doc.text(`Santana de Parnaíba, ${new Date().toLocaleDateString('pt-BR')}`, 15, y); y+=20;
@@ -2332,7 +2750,9 @@ async function gerarTermoPDF(loc, tipo){
 
   doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=5.5;
   doc.setFont('helvetica','normal');
-  doc.text(`${cliente.nome || '-'}  |  Doc: ${cliente.documento || '-'}  |  Tel: ${cliente.telefone || '-'}`, 15, y); y+=11;
+  doc.text(`${cliente.nome || '-'}  |  Doc: ${cliente.documento || '-'}  |  Tel: ${cliente.telefone || '-'}`, 15, y); y+=6;
+  const entregaT = doc.splitTextToSize(`Local de entrega / obra: ${textoEntrega(loc, cliente)}`, 180);
+  doc.text(entregaT, 15, y); y+= entregaT.length*5 + 5;
 
   doc.setFont('helvetica','bold');
   doc.text(tipo === 'retirada' ? `Data da retirada: ${fmtDate(loc.data_retirada)}` : `Data da devolução: ${fmtDate(loc.data_devolucao_real || todayISO())}`, 15, y);
