@@ -569,6 +569,11 @@ let DB = {
 // Dados da locadora logada (preenchidos pelo servidor em aplicarEmpresa)
 let EMPRESA = { nome: 'LocaObra', cnpj: '', telefone: '', email: '', endereco: '', cidade: '', cor_primaria: '#f59e0b', logo: null };
 let PAPEL = 'admin';
+// Modo compatível: enquanto o servidor antigo estiver no ar (sem a tabela locais_entrega),
+// locais de entrega e a lista de formas ficam guardados como registros ocultos em "clientes",
+// e o local/forma da locação vão marcados nas observações (gatilhos do banco separam os campos).
+let COMPAT = false;
+let FORMAS_CFG = null; // {id, lista}
 
 function escurecer(hexCor, fator){
   const n = parseInt(hexCor.slice(1), 16);
@@ -652,9 +657,15 @@ async function loadAll(){
       DB.locacoes = l.data || [];
       DB.itens_locacao = i.data || [];
       DB.pagamentos = p.data || [];
-      // locais de entrega (se o servidor ainda não tiver a tabela, segue sem eles)
+      // locais de entrega (servidor novo) ou registros ocultos (servidor antigo)
       const le = await supabaseClient.from('locais_entrega').select('*').order('criado_em',{ascending:false});
-      DB.locais_entrega = le.data || [];
+      COMPAT = !!le.error;
+      const ocultos = DB.clientes.filter(c => c.tipo_pessoa === 'local_entrega');
+      const cfg = DB.clientes.find(c => c.tipo_pessoa === 'config_formas');
+      DB.clientes = DB.clientes.filter(c => c.tipo_pessoa !== 'local_entrega' && c.tipo_pessoa !== 'config_formas');
+      DB.locais_entrega = (le.data || []).concat(ocultos.map(localDeCliente));
+      FORMAS_CFG = null;
+      if(cfg){ try{ const l = JSON.parse(cfg.observacoes || '[]'); if(Array.isArray(l) && l.length) FORMAS_CFG = { id: cfg.id, lista: l }; }catch(e){} }
     }catch(e){ console.error(e); toast('Erro ao carregar dados — usando modo local', false); }
   }
 }
@@ -1521,7 +1532,7 @@ async function salvarLocacao(){
     const novo = lerCamposLocal('nl');
     if(!novo.nome || !novo.endereco){ toast('Preencha o nome e o endereço do novo local de entrega', false); return; }
     novo.cliente_id = clienteId;
-    const r = await supabaseClient.from('locais_entrega').insert(novo).select().single();
+    const r = await gravarLocal(novo);
     if(r.error){ toast(r.error.message || 'Erro ao salvar o local de entrega', false); return; }
     DB.locais_entrega.unshift(r.data);
     localSel = r.data.id;
@@ -1544,7 +1555,7 @@ async function salvarLocacao(){
 
   let locacaoId, numero;
   if(supaOk){
-    const {data, error} = await supabaseClient.from('locacoes').insert(locacaoObj).select().single();
+    const {data, error} = await supabaseClient.from('locacoes').insert(prepararLocacao(locacaoObj)).select().single();
     if(error){ toast('Erro ao salvar locação', false); console.error(error); return; }
     locacaoId = data.id; numero = data.numero;
     const itens = carrinho.map(i=>{
@@ -1868,8 +1879,9 @@ const FORMAS_PADRAO = ['Dinheiro', 'Pix', 'Cartão de débito', 'Cartão de cré
 function formasPagamento(){
   try{
     const l = JSON.parse(EMPRESA.formas_pagamento || 'null');
-    if(Array.isArray(l) && l.length) return l;
+    if(Array.isArray(l) && l.length) return l.slice();
   }catch(e){}
+  if(FORMAS_CFG) return FORMAS_CFG.lista.slice();
   return FORMAS_PADRAO.slice();
 }
 function opcoesFormas(atual){
@@ -1893,10 +1905,16 @@ function painelFormas(){
   </div>`;
 }
 async function salvarFormas(lista){
-  const resp = await apiFetch('/api/empresa', { method: 'PATCH', body: JSON.stringify({ formas_pagamento: JSON.stringify(lista) }) });
-  if(!resp.ok){ toast(resp.data?.message || 'Erro ao salvar as formas de pagamento', false); return; }
-  aplicarEmpresa(resp.data);
-  if(!resp.data || resp.data.formas_pagamento === undefined){ toast('O servidor ainda não foi atualizado para guardar as formas de pagamento', false); return; }
+  if(COMPAT){
+    const reg = { tipo_pessoa: 'config_formas', nome: 'Formas de pagamento', documento: 'configuração', status: 'ativo', observacoes: JSON.stringify(lista) };
+    const r = FORMAS_CFG ? await supabaseClient.from('clientes').update(reg).eq('id', FORMAS_CFG.id) : await supabaseClient.from('clientes').insert(reg);
+    if(r.error){ toast(r.error.message || 'Erro ao salvar as formas de pagamento', false); return; }
+    FORMAS_CFG = { id: r.data.id, lista };
+  } else {
+    const resp = await apiFetch('/api/empresa', { method: 'PATCH', body: JSON.stringify({ formas_pagamento: JSON.stringify(lista) }) });
+    if(!resp.ok){ toast(resp.data?.message || 'Erro ao salvar as formas de pagamento', false); return; }
+    aplicarEmpresa(resp.data);
+  }
   toast('Formas de pagamento salvas');
   const pn = document.getElementById('painel-formas'); if(pn) pn.outerHTML = painelFormas();
 }
@@ -1919,6 +1937,36 @@ function restaurarFormas(){ if(confirm('Voltar para a lista padrão de formas de
 /* ======================================================
    LOCAIS DE ENTREGA / OBRAS
    ====================================================== */
+function localDeCliente(c){
+  let x = {}; try{ x = JSON.parse(c.observacoes || '{}') || {}; }catch(e){}
+  return { id: c.id, cliente_id: x.cliente_id, nome: c.nome, endereco: c.endereco, bairro: x.bairro, cidade: c.cidade, cep: x.cep,
+           contato: x.contato, telefone: c.telefone, observacoes: x.observacoes, status: c.status, criado_em: c.criado_em, _compat: true };
+}
+function clienteDeLocal(l){
+  return { tipo_pessoa: 'local_entrega', nome: l.nome, documento: 'local de entrega', endereco: l.endereco, cidade: l.cidade || '',
+           telefone: l.telefone || '', status: 'ativo',
+           observacoes: JSON.stringify({ cliente_id: l.cliente_id, bairro: l.bairro || '', cep: l.cep || '', contato: l.contato || '', observacoes: l.observacoes || '' }) };
+}
+// grava um local (servidor novo: tabela própria; antigo: registro oculto em clientes)
+async function gravarLocal(dados, id){
+  const atual = id && DB.locais_entrega.find(x => x.id === id);
+  if(COMPAT || (atual && atual._compat)){
+    const r = id ? await supabaseClient.from('clientes').update(clienteDeLocal(dados)).eq('id', id)
+                 : await supabaseClient.from('clientes').insert(clienteDeLocal(dados));
+    return r.error ? r : { data: localDeCliente(r.data), error: null };
+  }
+  return id ? await supabaseClient.from('locais_entrega').update(dados).eq('id', id)
+            : await supabaseClient.from('locais_entrega').insert(dados);
+}
+// local, endereço e forma da locação: no servidor antigo vão marcados nas observações
+function prepararLocacao(obj){
+  if(!COMPAT) return obj;
+  const o = { ...obj };
+  const m = { l: o.local_entrega_id ?? null, e: o.endereco_entrega ?? null, f: o.forma_pagamento ?? null };
+  delete o.local_entrega_id; delete o.endereco_entrega; delete o.forma_pagamento;
+  o.observacoes = (o.observacoes ? o.observacoes + '\n' : '') + '[[LO:' + JSON.stringify(m) + ']]';
+  return o;
+}
 function camposLocalHTML(px, l = {}){
   return `
     <div class="row">
@@ -2007,8 +2055,7 @@ function renderLocais(el){
     const dados = { ...lerCamposLocal('le'), cliente_id: document.getElementById('le-cliente').value, observacoes: document.getElementById('le-obs').value.trim() };
     if(!dados.cliente_id){ toast('Escolha o cliente', false); return; }
     if(!dados.nome || !dados.endereco){ toast('Preencha o nome do local e o endereço', false); return; }
-    const r = id ? await supabaseClient.from('locais_entrega').update(dados).eq('id', id)
-                 : await supabaseClient.from('locais_entrega').insert(dados);
+    const r = await gravarLocal(dados, id);
     if(r.error){ toast(r.error.message || 'Erro ao salvar o local', false); return; }
     toast(id ? 'Local atualizado' : 'Local de entrega cadastrado');
     render('locais');
@@ -2048,10 +2095,11 @@ function editarLocal(id){
 async function excluirLocal(id){
   if(!confirm('Excluir este local de entrega? As locações antigas continuam com o endereço gravado.')) return;
   // desvincula das locações antes de excluir
-  for(const l of DB.locacoes.filter(x => x.local_entrega_id === id)){
+  if(!COMPAT) for(const l of DB.locacoes.filter(x => x.local_entrega_id === id)){
     await supabaseClient.from('locacoes').update({ local_entrega_id: null }).eq('id', l.id);
   }
-  const r = await supabaseClient.from('locais_entrega').delete().eq('id', id);
+  const alvo = DB.locais_entrega.find(x => x.id === id);
+  const r = await supabaseClient.from(alvo && alvo._compat ? 'clientes' : 'locais_entrega').delete().eq('id', id);
   if(r.error){ toast(r.error.message || 'Erro ao excluir', false); return; }
   toast('Local excluído');
   render('locais');
@@ -2178,7 +2226,7 @@ function abrirEditarLocacao(locId){
       const novo = lerCamposLocal('el');
       if(!novo.nome || !novo.endereco){ toast('Preencha o nome e o endereço do novo local', false); btn.disabled = false; return; }
       novo.cliente_id = loc.cliente_id;
-      const rl = await supabaseClient.from('locais_entrega').insert(novo).select().single();
+      const rl = await gravarLocal(novo);
       if(rl.error){ toast(rl.error.message || 'Erro ao salvar o local', false); btn.disabled = false; return; }
       DB.locais_entrega.unshift(rl.data); localSel = rl.data.id;
     }
@@ -2191,7 +2239,7 @@ function abrirEditarLocacao(locId){
       observacoes: document.getElementById('ed-obs').value.trim() || null,
       local_entrega_id: entrega.local_entrega_id, endereco_entrega: entrega.endereco_entrega
     };
-    const r = await supabaseClient.from('locacoes').update(dados).eq('id', loc.id);
+    const r = await supabaseClient.from('locacoes').update(prepararLocacao(dados)).eq('id', loc.id);
     if(r.error){ toast(r.error.message || 'Erro ao salvar', false); btn.disabled = false; return; }
     // se recalculou, atualiza também o valor de cada item (aparece no contrato)
     if(EDIT_RECALC && EDIT_RECALC.locId === loc.id && Math.abs(EDIT_RECALC.total - dados.valor_total) < 0.01){

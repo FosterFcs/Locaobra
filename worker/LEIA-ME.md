@@ -50,3 +50,20 @@ As rotas antigas (`/api/clientes`, `/api/ferramentas` etc.) continuam iguais par
 - Novo segredo no Worker: `CRIPTO_CHAVE` (Segredo) — 32 bytes em base64. Guarda criptografadas as chaves de API do Asaas das locadoras. **Não trocar depois de configurado**: se trocar, as locadoras precisam colar a chave do Asaas de novo.
 - Pix simples (chave Pix da locadora) não depende do Asaas nem do segredo.
 - Webhook de cada locadora: `https://<worker>/webhook/locadora/<empresa_id>`, criado automaticamente na conta Asaas dela.
+
+## Locais de entrega e formas de pagamento (nov/2026)
+- `migracao-entrega-pagamentos.sql` e `gatilhos-modo-compativel.sql` já aplicados no `locaobra-db`.
+- **Modo compatível:** enquanto o Worker antigo estiver no ar (sem a rota `/api/locais_entrega`), o app guarda
+  locais de entrega como registros ocultos em `clientes` (`tipo_pessoa = 'local_entrega'`), a lista de formas
+  em `clientes` (`tipo_pessoa = 'config_formas'`) e manda local/endereço/forma da locação marcados nas
+  observações (`[[LO:{...}]]`); os gatilhos do banco separam nos campos certos.
+- Depois de publicar o `worker.js` novo, migrar os registros ocultos:
+  ```sql
+  INSERT INTO locais_entrega (id, empresa_id, cliente_id, nome, endereco, bairro, cidade, cep, contato, telefone, observacoes, status, criado_em)
+    SELECT id, empresa_id, json_extract(observacoes,'$.cliente_id'), nome, endereco, json_extract(observacoes,'$.bairro'), cidade,
+           json_extract(observacoes,'$.cep'), json_extract(observacoes,'$.contato'), telefone, json_extract(observacoes,'$.observacoes'), status, criado_em
+      FROM clientes WHERE tipo_pessoa = 'local_entrega';
+  UPDATE empresas SET formas_pagamento = (SELECT c.observacoes FROM clientes c WHERE c.empresa_id = empresas.id AND c.tipo_pessoa = 'config_formas')
+    WHERE formas_pagamento IS NULL;
+  DELETE FROM clientes WHERE tipo_pessoa IN ('local_entrega','config_formas');
+  ```
