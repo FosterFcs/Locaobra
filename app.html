@@ -159,6 +159,10 @@ tr:hover td{background:#F2EFE8;}
 .l-curto{display:none;}
 @media (max-width:768px){ .l-longo{display:none;} .l-curto{display:inline;} }
 .pdf-caixa{max-width:760px;}
+.inp-valor{width:110px; padding:7px 9px; border:1.5px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:13.5px; background:#fff;}
+.ajuste-total{margin-top:12px; padding:12px; border:1.5px dashed var(--line); border-radius:8px;}
+.ajuste-total label{display:block; font-size:12.5px; font-weight:600; margin-bottom:6px;}
+@media (max-width:768px){ .tab-itens .inp-valor{width:90px;} }
 .sub-entrega{font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.3;}
 .chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
 .chip{display:inline-flex; align-items:center; gap:6px; border:1.5px solid var(--line); border-radius:20px; padding:5px 6px 5px 12px; font-size:13px; font-weight:600; background:#fff;}
@@ -1357,7 +1361,45 @@ async function excluirFerramenta(id){
 /* ======================================================
    NOVA LOCAÇÃO
    ====================================================== */
-let carrinho = []; // {ferramenta_id, quantidade}
+let carrinho = []; // {ferramenta_id, quantidade, unit?, sub?}  unit/sub = valor combinado com o cliente
+const r2 = v => Math.round(Number(v || 0) * 100) / 100;
+function periodoAtual(){ const tipo = document.getElementById('loc-tipo')?.value || 'diaria'; return { tipo, dias: calcularPeriodo().dias }; }
+function valorTabela(i){ const { tipo, dias } = periodoAtual(); const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); return r2(calcularItemValor(f, tipo, dias)); }
+function subtotalCarrinho(i){
+  if(i.sub != null) return r2(i.sub);
+  return r2((i.unit != null ? i.unit : valorTabela(i)) * i.quantidade);
+}
+function unitCarrinho(i){ return i.sub != null ? r2(i.sub / i.quantidade) : (i.unit != null ? r2(i.unit) : valorTabela(i)); }
+// distribui um total entre itens proporcionalmente (centavos que sobram vão para o último)
+function distribuirTotal(subs, total, qs){
+  const n = subs.length; if(!n) return [];
+  qs = qs || subs.map(() => 1);
+  const soma = subs.reduce((t, v) => t + v, 0);
+  // valor unitário em centavos exatos; a sobra fica num item de quantidade 1 (se houver)
+  let j = -1; for(let k = n - 1; k >= 0; k--) if(qs[k] === 1){ j = k; break; }
+  if(j < 0) j = n - 1;
+  const novos = subs.map((v, k) => { const alvo = soma > 0 ? v / soma * total : total / n; return r2(r2(alvo / qs[k]) * qs[k]); });
+  novos[j] = r2(total - novos.reduce((t, v, k) => k === j ? t : t + v, 0));
+  return novos;
+}
+function setUnitItem(fid, v){
+  const i = carrinho.find(x => x.ferramenta_id === fid); if(!i) return;
+  const n = Number(String(v).replace(',', '.'));
+  if(v === '' || !(n >= 0)){ i.unit = null; } else { i.unit = r2(n); }
+  i.sub = null;
+  renderCarrinho(); calcularResumo();
+}
+function voltarTabela(fid){ const i = carrinho.find(x => x.ferramenta_id === fid); if(i){ i.unit = null; i.sub = null; } renderCarrinho(); calcularResumo(); }
+function aplicarTotalCombinado(){
+  const inp = document.getElementById('total-combinado');
+  const total = r2(String(inp.value).replace(',', '.'));
+  if(!(total > 0)){ toast('Informe o valor total combinado', false); return; }
+  if(!carrinho.length){ toast('Adicione as ferramentas primeiro', false); return; }
+  const novos = distribuirTotal(carrinho.map(subtotalCarrinho), total, carrinho.map(i => i.quantidade));
+  carrinho.forEach((i, k) => { i.sub = novos[k]; i.unit = null; });
+  renderCarrinho(); calcularResumo();
+  toast(`Total ajustado para ${fmtMoney(total)} e dividido entre os itens`);
+}
 
 function renderNovaLocacao(el){
   carrinho = [];
@@ -1415,9 +1457,9 @@ function renderNovaLocacao(el){
   selCli.addEventListener('change', () => preencherLocais('loc-local', selCli.value, ''));
   preencherLocais('loc-local', selCli.value, '');
   document.getElementById('loc-local').addEventListener('change', ev => document.getElementById('loc-novo-local').classList.toggle('hidden', ev.target.value !== '__novo'));
-  document.getElementById('loc-tipo').addEventListener('change', calcularResumo);
-  document.getElementById('loc-devolucao').addEventListener('change', calcularResumo);
-  document.getElementById('loc-retirada').addEventListener('change', calcularResumo);
+  document.getElementById('loc-tipo').addEventListener('change', () => { renderCarrinho(); calcularResumo(); });
+  document.getElementById('loc-devolucao').addEventListener('change', () => { renderCarrinho(); calcularResumo(); });
+  document.getElementById('loc-retirada').addEventListener('change', () => { renderCarrinho(); calcularResumo(); });
   document.getElementById('loc-caucao').addEventListener('input', calcularResumo);
 
   // sugerir devolução +1 dia por padrão
@@ -1433,7 +1475,7 @@ function adicionarItem(){
   const qtd = Number(document.getElementById('add-qtd').value);
   if(!sel.value){ toast('Selecione uma ferramenta', false); return; }
   const existente = carrinho.find(i=>i.ferramenta_id===sel.value);
-  if(existente){ existente.quantidade += qtd; }
+  if(existente){ existente.quantidade += qtd; existente.sub = null; }
   else { carrinho.push({ferramenta_id: sel.value, quantidade: qtd}); }
   renderCarrinho();
   calcularResumo();
@@ -1448,13 +1490,26 @@ function removerItem(fid){
 function renderCarrinho(){
   const box = document.getElementById('carrinho-list');
   if(!carrinho.length){ box.innerHTML = '<div class="empty" style="padding:16px;">Nenhuma ferramenta adicionada ainda</div>'; return; }
-  box.innerHTML = `<table><thead><tr><th>Ferramenta</th><th>Qtd</th><th></th></tr></thead><tbody>
+  const total = carrinho.reduce((t, i) => t + subtotalCarrinho(i), 0);
+  box.innerHTML = `<table class="tab-itens"><thead><tr><th>Ferramenta</th><th>Qtd</th><th>Valor unit. (R$)</th><th>Subtotal</th><th></th></tr></thead><tbody>
     ${carrinho.map(i=>{
       const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      return `<tr><td>${f?f.nome:'?'}</td><td class="mono">${i.quantidade}</td>
+      const manual = i.unit != null || i.sub != null;
+      return `<tr><td>${esc(f?f.nome:'?')}</td><td class="mono">${i.quantidade}</td>
+      <td><input class="inp-valor" type="number" step="0.01" min="0" inputmode="decimal" value="${unitCarrinho(i).toFixed(2)}" aria-label="Valor unitário de ${esc(f?f.nome:'')}" onchange="setUnitItem('${i.ferramenta_id}', this.value)">
+        <div class="sub-entrega">${manual ? `valor combinado · <a href="#" onclick="voltarTabela('${i.ferramenta_id}');return false;">voltar à tabela (${fmtMoney(valorTabela(i))})</a>` : 'valor da tabela'}</div></td>
+      <td class="mono">${fmtMoney(subtotalCarrinho(i))}</td>
       <td><button class="btn btn-danger btn-sm" onclick="removerItem('${i.ferramenta_id}')">Remover</button></td></tr>`;
     }).join('')}
-  </tbody></table>`;
+  </tbody></table>
+  <div class="ajuste-total">
+    <label for="total-combinado">Valor total combinado com o cliente (opcional)</label>
+    <div class="item-row">
+      <input id="total-combinado" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Ex.: 400,00 (hoje: ${fmtMoney(total)})">
+      <button type="button" class="btn btn-dark btn-sm" onclick="aplicarTotalCombinado()">Aplicar</button>
+    </div>
+    <div class="sub-entrega">O sistema divide o valor entre os itens, proporcional ao preço de cada um, para a soma bater no contrato.</div>
+  </div>`;
 }
 
 function calcularPeriodo(){
@@ -1491,7 +1546,7 @@ function calcularResumo(){
   let total = 0;
   const linhas = carrinho.map(i=>{
     const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-    const subtotal = calcularItemValor(f, tipo, dias) * i.quantidade;
+    const subtotal = subtotalCarrinho(i);
     total += subtotal;
     return `<div class="row" style="font-size:13.5px; color:#C9CCD1;"><span>${f?f.nome:'?'} × ${i.quantidade}</span><span class="mono">${fmtMoney(subtotal)}</span></div>`;
   }).join('');
@@ -1514,7 +1569,7 @@ function calcularResumo(){
       <button class="btn btn-primary" onclick="salvarLocacao()">Confirmar locação</button>
     </div>
   `;
-  window._locTotal = total;
+  window._locTotal = r2(total);
 }
 
 async function salvarLocacao(){
@@ -1564,8 +1619,8 @@ async function salvarLocacao(){
     locacaoId = data.id; numero = data.numero;
     const itens = carrinho.map(i=>{
       const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      const valorUnit = calcularItemValor(f, tipo, dias);
-      return {locacao_id: locacaoId, ferramenta_id: i.ferramenta_id, quantidade: i.quantidade, valor_unitario: valorUnit, subtotal: valorUnit*i.quantidade};
+      const sub = subtotalCarrinho(i);
+      return {locacao_id: locacaoId, ferramenta_id: i.ferramenta_id, quantidade: i.quantidade, valor_unitario: r2(sub / i.quantidade), subtotal: sub};
     });
     // o servidor grava cada item e baixa o estoque junto; recusa se faltar quantidade
     const {error:e2} = await supabaseClient.from('itens_locacao').insert(itens);
@@ -1582,8 +1637,8 @@ async function salvarLocacao(){
     DB.locacoes.unshift(locacaoObj);
     carrinho.forEach(i=>{
       const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      const valorUnit = calcularItemValor(f, tipo, dias);
-      DB.itens_locacao.push({id:uid(), locacao_id: locacaoId, ferramenta_id:i.ferramenta_id, quantidade:i.quantidade, valor_unitario:valorUnit, subtotal:valorUnit*i.quantidade});
+      const sub = subtotalCarrinho(i);
+      DB.itens_locacao.push({id:uid(), locacao_id: locacaoId, ferramenta_id:i.ferramenta_id, quantidade:i.quantidade, valor_unitario:r2(sub / i.quantidade), subtotal:sub});
       f.quantidade_disponivel -= i.quantidade;
     });
   }
@@ -2233,11 +2288,37 @@ async function excluirPagamento(pagId, locId){
 /* ======================================================
    EDITAR LOCAÇÃO (datas, valores, local, forma, observações)
    ====================================================== */
-let EDIT_RECALC = null;
+let EDIT_ITENS = []; // [{id, nome, q, sub, orig}]
+function renderItensEdicao(){
+  const box = document.getElementById('ed-itens'); if(!box) return;
+  const soma = r2(EDIT_ITENS.reduce((t, i) => t + i.sub, 0));
+  box.innerHTML = `<table class="tab-itens"><thead><tr><th>Ferramenta</th><th>Qtd</th><th>Valor unit. (R$)</th><th>Subtotal</th></tr></thead><tbody>
+    ${EDIT_ITENS.map((i, k) => `<tr><td>${esc(i.nome)}</td><td class="mono">${i.q}</td>
+      <td><input class="inp-valor" type="number" step="0.01" min="0" inputmode="decimal" value="${r2(i.sub / i.q).toFixed(2)}" aria-label="Valor unitário de ${esc(i.nome)}" onchange="setUnitEdicao(${k}, this.value)"></td>
+      <td class="mono">${fmtMoney(i.sub)}</td></tr>`).join('')}
+    <tr><td colspan="3"><b>Soma dos itens</b></td><td class="mono"><b>${fmtMoney(soma)}</b></td></tr></tbody></table>`;
+  const tot = document.getElementById('ed-total'); if(tot) tot.value = soma.toFixed(2);
+}
+function setUnitEdicao(k, v){
+  const i = EDIT_ITENS[k]; const n = Number(String(v).replace(',', '.'));
+  if(!(n >= 0)) return;
+  i.sub = r2(n * i.q); renderItensEdicao();
+}
+function distribuirEdicao(){
+  const total = r2(document.getElementById('ed-total').value);
+  if(!(total >= 0) || !EDIT_ITENS.length) return;
+  const novos = distribuirTotal(EDIT_ITENS.map(i => i.sub), total, EDIT_ITENS.map(i => i.q));
+  EDIT_ITENS.forEach((i, k) => i.sub = novos[k]);
+  renderItensEdicao();
+  toast(`Total de ${fmtMoney(total)} dividido entre os itens`);
+}
 function abrirEditarLocacao(locId){
   const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
   const cli = DB.clientes.find(c => c.id === loc.cliente_id);
-  EDIT_RECALC = null;
+  EDIT_ITENS = DB.itens_locacao.filter(i => i.locacao_id === loc.id).map(i => {
+    const f = DB.ferramentas.find(x => x.id === i.ferramenta_id);
+    return { id: i.id, ferramenta_id: i.ferramenta_id, nome: f ? f.nome : '?', q: Number(i.quantidade || 1), sub: r2(i.subtotal), orig: r2(i.subtotal) };
+  });
   const fundo = abrirModal('edit-fundo', 'Editar locação', `Contrato #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
     <form id="form-editar">
       <div class="row">
@@ -2253,7 +2334,11 @@ function abrirEditarLocacao(locId){
         <div class="field"><label for="ed-total">Valor total (R$)</label><input id="ed-total" type="number" step="0.01" min="0" required value="${Number(loc.valor_total || 0).toFixed(2)}"></div>
         <div class="field"><label for="ed-caucao">Caução (R$)</label><input id="ed-caucao" type="number" step="0.01" min="0" value="${Number(loc.valor_caucao || 0).toFixed(2)}"></div>
       </div>
-      <button type="button" class="btn btn-outline btn-sm" style="margin:-4px 0 12px" onclick="recalcularEdicao('${loc.id}')">Recalcular valor pelas novas datas</button>
+      <div class="actions-cell" style="margin:-4px 0 10px">
+        <button type="button" class="btn btn-dark btn-sm" onclick="distribuirEdicao()">Dividir o total entre os itens</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="recalcularEdicao('${loc.id}')">Recalcular pela tabela e novas datas</button>
+      </div>
+      <div id="ed-itens" style="margin-bottom:12px; overflow-x:auto;"></div>
       <div class="field"><label for="ed-local">Local de entrega / obra</label><select id="ed-local"></select></div>
       <div id="ed-novo-local" class="hidden" style="border:1.5px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:12px;">${camposLocalHTML('el')}</div>
       <div class="field"><label for="ed-obs">Observações do contrato</label><textarea id="ed-obs" rows="2">${esc(loc.observacoes || '')}</textarea></div>
@@ -2263,6 +2348,9 @@ function abrirEditarLocacao(locId){
       </div>
       <div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">Para trocar ou incluir ferramentas, faça uma nova locação (o estoque é controlado por item).</div>
     </form>`);
+  renderItensEdicao();
+  document.getElementById('ed-total').value = Number(loc.valor_total || 0).toFixed(2);
+  document.getElementById('ed-total').addEventListener('change', distribuirEdicao);
   preencherLocais('ed-local', loc.cliente_id, valorSelecaoEntrega(loc));
   document.getElementById('ed-local').addEventListener('change', ev => document.getElementById('ed-novo-local').classList.toggle('hidden', ev.target.value !== '__novo'));
   ['ed-retirada','ed-devolucao','ed-tipo'].forEach(id => document.getElementById(id).addEventListener('change', () => {
@@ -2293,9 +2381,16 @@ function abrirEditarLocacao(locId){
     };
     const r = await supabaseClient.from('locacoes').update(prepararLocacao(dados)).eq('id', loc.id);
     if(r.error){ toast(r.error.message || 'Erro ao salvar', false); btn.disabled = false; return; }
-    // se recalculou, atualiza também o valor de cada item (aparece no contrato)
-    if(EDIT_RECALC && EDIT_RECALC.locId === loc.id && Math.abs(EDIT_RECALC.total - dados.valor_total) < 0.01){
-      for(const it of EDIT_RECALC.itens) await supabaseClient.from('itens_locacao').update({ valor_unitario: it.valor_unitario, subtotal: it.subtotal }).eq('id', it.id);
+    // grava o valor de cada item; a soma sempre bate com o total do contrato
+    if(EDIT_ITENS.length){
+      if(Math.abs(EDIT_ITENS.reduce((t, i) => t + i.sub, 0) - dados.valor_total) > 0.009){
+        const novos = distribuirTotal(EDIT_ITENS.map(i => i.sub), dados.valor_total, EDIT_ITENS.map(i => i.q));
+        EDIT_ITENS.forEach((i, k) => i.sub = novos[k]);
+      }
+      for(const it of EDIT_ITENS.filter(i => Math.abs(i.sub - i.orig) > 0.009)){
+        const ri = await supabaseClient.from('itens_locacao').update({ valor_unitario: r2(it.sub / it.q), subtotal: it.sub }).eq('id', it.id);
+        if(ri.error){ toast(ri.error.message || 'Erro ao salvar o valor dos itens', false); btn.disabled = false; return; }
+      }
     }
     toast('Locação atualizada');
     fecharModal('edit-fundo');
@@ -2309,16 +2404,10 @@ function recalcularEdicao(locId){
   const tipo = document.getElementById('ed-tipo').value;
   if(!ret || !dev){ toast('Preencha as duas datas', false); return; }
   const dias = Math.max(1, Math.round((new Date(dev) - new Date(ret)) / 86400000));
-  const itens = DB.itens_locacao.filter(i => i.locacao_id === locId).map(i => {
-    const f = DB.ferramentas.find(x => x.id === i.ferramenta_id);
-    const vu = Math.round(calcularItemValor(f, tipo, dias) * 100) / 100;
-    return { id: i.id, valor_unitario: vu, subtotal: Math.round(vu * i.quantidade * 100) / 100 };
-  });
-  const total = Math.round(itens.reduce((t, i) => t + i.subtotal, 0) * 100) / 100;
-  EDIT_RECALC = { locId, itens, total };
-  const campo = document.getElementById('ed-total');
-  campo.value = total.toFixed(2); campo.style.outline = '';
-  toast(`Novo valor: ${fmtMoney(total)} (${dias} dia(s), cobrança ${tipo})`);
+  EDIT_ITENS.forEach(i => { const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); i.sub = r2(r2(calcularItemValor(f, tipo, dias)) * i.q); });
+  renderItensEdicao();
+  document.getElementById('ed-total').style.outline = '';
+  toast(`Valores da tabela: ${fmtMoney(EDIT_ITENS.reduce((t, i) => t + i.sub, 0))} (${dias} dia(s), cobrança ${tipo})`);
 }
 
 /* ======================================================
