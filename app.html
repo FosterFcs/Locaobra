@@ -159,6 +159,8 @@ tr:hover td{background:#F2EFE8;}
 .l-curto{display:none;}
 @media (max-width:768px){ .l-longo{display:none;} .l-curto{display:inline;} }
 .pdf-caixa{max-width:760px;}
+#edit-fundo .pix-caixa{max-width:760px;}
+#ed-itens .tab-itens td, #ed-itens .tab-itens th{white-space:nowrap;}
 .inp-valor{width:110px; padding:7px 9px; border:1.5px solid var(--line); border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:13.5px; background:#fff;}
 .ajuste-total{margin-top:12px; padding:12px; border:1.5px dashed var(--line); border-radius:8px;}
 .ajuste-total label{display:block; font-size:12.5px; font-weight:600; margin-bottom:6px;}
@@ -2311,16 +2313,83 @@ async function excluirPagamento(pagId, locId){
 /* ======================================================
    EDITAR LOCAÇÃO (datas, valores, local, forma, observações)
    ====================================================== */
-let EDIT_ITENS = []; // [{id, nome, q, sub, orig}]
+let EDIT_ITENS = []; // [{id|null, ferramenta_id, nome, q, origQ, sub, orig, removido}]
+let EDIT_ATIVA = false; // itens só mudam com a locação ativa (estoque fora da loja)
+const itensAtivos = () => EDIT_ITENS.filter(i => !i.removido);
+function periodoEdicao(){
+  const ret = document.getElementById('ed-retirada')?.value, dev = document.getElementById('ed-devolucao')?.value;
+  const dias = ret && dev ? Math.max(1, Math.round((new Date(dev) - new Date(ret)) / 86400000)) : 1;
+  return { tipo: document.getElementById('ed-tipo')?.value || 'diaria', dias };
+}
+// estoque livre de uma ferramenta, contando o que já está nesta locação e o que foi mudado aqui
+function livreEdicao(fid){
+  const f = DB.ferramentas.find(x => x.id === fid); if(!f) return 0;
+  let livre = Number(f.quantidade_disponivel || 0);
+  EDIT_ITENS.filter(i => i.ferramenta_id === fid).forEach(i => { livre += (i.origQ || 0) - (i.removido ? 0 : i.q); });
+  return livre;
+}
 function renderItensEdicao(){
   const box = document.getElementById('ed-itens'); if(!box) return;
-  const soma = r2(EDIT_ITENS.reduce((t, i) => t + i.sub, 0));
-  box.innerHTML = `<table class="tab-itens"><thead><tr><th>Ferramenta</th><th>Qtd</th><th>Valor unit. (R$)</th><th>Subtotal</th></tr></thead><tbody>
-    ${EDIT_ITENS.map((i, k) => `<tr><td>${esc(i.nome)}</td><td class="mono">${i.q}</td>
+  const ativos = itensAtivos();
+  const soma = r2(ativos.reduce((t, i) => t + i.sub, 0));
+  const opcoes = DB.ferramentas.filter(f => livreEdicao(f.id) > 0).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'))
+    .map(f => `<option value="${f.id}">${esc(f.nome)} (${esc(f.codigo)}) — disp: ${livreEdicao(f.id)}</option>`).join('');
+  box.innerHTML = `<table class="tab-itens"><thead><tr><th>Ferramenta</th><th>Qtd</th><th>Valor unit. (R$)</th><th>Subtotal</th>${EDIT_ATIVA ? '<th></th>' : ''}</tr></thead><tbody>
+    ${EDIT_ITENS.map((i, k) => i.removido ? '' : `<tr><td>${esc(i.nome)}${!i.id ? ' <span class="badge badge-ok">novo</span>' : ''}</td>
+      <td>${EDIT_ATIVA ? `<input class="inp-valor" style="width:70px" type="number" min="1" step="1" value="${i.q}" aria-label="Quantidade de ${esc(i.nome)}" onchange="setQtdEdicao(${k}, this.value)">` : `<span class="mono">${i.q}</span>`}</td>
       <td><input class="inp-valor" type="number" step="0.01" min="0" inputmode="decimal" value="${r2(i.sub / i.q).toFixed(2)}" aria-label="Valor unitário de ${esc(i.nome)}" onchange="setUnitEdicao(${k}, this.value)"></td>
-      <td class="mono">${fmtMoney(i.sub)}</td></tr>`).join('')}
-    <tr><td colspan="3"><b>Soma dos itens</b></td><td class="mono"><b>${fmtMoney(soma)}</b></td></tr></tbody></table>`;
+      <td class="mono">${fmtMoney(i.sub)}</td>
+      ${EDIT_ATIVA ? `<td><button type="button" class="btn btn-danger btn-sm" onclick="removerItemEdicao(${k})">Retirar</button></td>` : ''}</tr>`).join('')}
+    <tr><td colspan="3"><b>Soma dos itens</b></td><td class="mono"><b>${fmtMoney(soma)}</b></td>${EDIT_ATIVA ? '<td></td>' : ''}</tr></tbody></table>
+    ${EDIT_ATIVA ? `<div class="ajuste-total">
+      <label for="ed-busca">Incluir equipamento</label>
+      <input id="ed-busca" type="search" autocomplete="off" placeholder="Buscar por nome, código ou categoria" oninput="filtrarEdicao()" onkeydown="if(event.key==='Enter'){event.preventDefault(); adicionarItemEdicao();}" style="margin-bottom:6px; width:100%;">
+      <div class="item-row">
+        <select id="ed-add-ferr">${opcoes || '<option value="">Sem estoque disponível</option>'}</select>
+        <input id="ed-add-qtd" type="number" class="qty" value="1" min="1" aria-label="Quantidade">
+        <button type="button" class="btn btn-dark btn-sm" onclick="adicionarItemEdicao()">Incluir</button>
+      </div>
+      <div class="sub-entrega">O estoque é ajustado quando você salvar: o que entra sai do estoque, o que é retirado volta.</div>
+    </div>` : '<div class="sub-entrega">Esta locação não está ativa: dá para ajustar valores, mas não incluir ou retirar itens.</div>'}`;
   const tot = document.getElementById('ed-total'); if(tot) tot.value = soma.toFixed(2);
+}
+function filtrarEdicao(){
+  const sel = document.getElementById('ed-add-ferr'); if(!sel) return;
+  const termos = semAcentoBusca(document.getElementById('ed-busca').value).split(/\s+/).filter(Boolean);
+  const lista = DB.ferramentas.filter(f => livreEdicao(f.id) > 0)
+    .filter(f => { const alvo = semAcentoBusca([f.nome, f.codigo, f.categoria].join(' ')); return termos.every(t => alvo.includes(t)); })
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  sel.innerHTML = lista.length ? lista.map(f => `<option value="${f.id}">${esc(f.nome)} (${esc(f.codigo)}) — disp: ${livreEdicao(f.id)}</option>`).join('') : '<option value="">Nenhum equipamento encontrado</option>';
+}
+function adicionarItemEdicao(){
+  const fid = document.getElementById('ed-add-ferr').value;
+  const q = Math.max(1, Math.round(Number(document.getElementById('ed-add-qtd').value) || 1));
+  if(!fid){ toast('Escolha o equipamento', false); return; }
+  if(q > livreEdicao(fid)){ toast(`Estoque insuficiente: disponível ${livreEdicao(fid)}`, false); return; }
+  const f = DB.ferramentas.find(x => x.id === fid);
+  const { tipo, dias } = periodoEdicao();
+  const unit = r2(calcularItemValor(f, tipo, dias));
+  const existente = EDIT_ITENS.find(i => i.ferramenta_id === fid && !i.removido);
+  if(existente){ existente.sub = r2(existente.sub + unit * q); existente.q += q; }
+  else EDIT_ITENS.push({ id: null, ferramenta_id: fid, nome: f.nome, q, origQ: 0, sub: r2(unit * q), orig: 0, removido: false });
+  renderItensEdicao();
+  const b = document.getElementById('ed-busca'); if(b) b.focus();
+  toast(`${f.nome} incluído`);
+}
+function setQtdEdicao(k, v){
+  const i = EDIT_ITENS[k]; const q = Math.round(Number(v));
+  if(!(q >= 1)){ renderItensEdicao(); return; }
+  const extra = q - i.q;
+  if(extra > 0 && extra > livreEdicao(i.ferramenta_id)){ toast(`Estoque insuficiente: dá para somar no máximo ${livreEdicao(i.ferramenta_id)}`, false); renderItensEdicao(); return; }
+  const unit = r2(i.sub / i.q);
+  i.q = q; i.sub = r2(unit * q);
+  renderItensEdicao();
+}
+function removerItemEdicao(k){
+  if(itensAtivos().length <= 1){ toast('A locação precisa de ao menos um item. Para desfazer tudo, use Cancelar.', false); return; }
+  const i = EDIT_ITENS[k];
+  if(i.id) i.removido = true; else EDIT_ITENS.splice(k, 1);
+  renderItensEdicao();
 }
 function setUnitEdicao(k, v){
   const i = EDIT_ITENS[k]; const n = Number(String(v).replace(',', '.'));
@@ -2329,19 +2398,57 @@ function setUnitEdicao(k, v){
 }
 function distribuirEdicao(){
   const total = r2(document.getElementById('ed-total').value);
-  if(!(total >= 0) || !EDIT_ITENS.length) return;
-  const novos = distribuirTotal(EDIT_ITENS.map(i => i.sub), total, EDIT_ITENS.map(i => i.q));
-  EDIT_ITENS.forEach((i, k) => i.sub = novos[k]);
+  const ativos = itensAtivos();
+  if(!(total >= 0) || !ativos.length) return;
+  const novos = distribuirTotal(ativos.map(i => i.sub), total, ativos.map(i => i.q));
+  ativos.forEach((i, k) => i.sub = novos[k]);
   renderItensEdicao();
   toast(`Total de ${fmtMoney(total)} dividido entre os itens`);
+}
+// grava as mudanças de itens e de estoque (depois de salvar a locação)
+async function salvarItensEdicao(loc, total){
+  const ativos = itensAtivos();
+  if(Math.abs(ativos.reduce((t, i) => t + i.sub, 0) - total) > 0.009){
+    const novos = distribuirTotal(ativos.map(i => i.sub), total, ativos.map(i => i.q));
+    ativos.forEach((i, k) => i.sub = novos[k]);
+  }
+  const ajustaEstoque = async (fid, delta) => { // delta > 0 volta ao estoque
+    const f = DB.ferramentas.find(x => x.id === fid); if(!f || !delta) return null;
+    const nova = Math.max(0, Math.min(Number(f.quantidade_total || 0), Number(f.quantidade_disponivel || 0) + delta));
+    const r = await supabaseClient.from('ferramentas').update({ quantidade_disponivel: nova }).eq('id', fid);
+    if(!r.error) f.quantidade_disponivel = nova;
+    return r.error;
+  };
+  // 1. retirados: apaga o item e devolve ao estoque
+  for(const i of EDIT_ITENS.filter(x => x.removido && x.id)){
+    const r = await supabaseClient.from('itens_locacao').delete().eq('id', i.id);
+    if(r.error) return r.error.message || 'Erro ao retirar item';
+    const e = await ajustaEstoque(i.ferramenta_id, i.origQ); if(e) return e.message || 'Erro ao devolver estoque';
+  }
+  // 2. existentes: quantidade e valor
+  for(const i of ativos.filter(x => x.id)){
+    const mudouQ = i.q !== i.origQ, mudouV = Math.abs(i.sub - i.orig) > 0.009;
+    if(!mudouQ && !mudouV) continue;
+    if(mudouQ){ const e = await ajustaEstoque(i.ferramenta_id, i.origQ - i.q); if(e) return e.message || 'Erro no estoque'; }
+    const r = await supabaseClient.from('itens_locacao').update({ quantidade: i.q, valor_unitario: r2(i.sub / i.q), subtotal: i.sub }).eq('id', i.id);
+    if(r.error) return r.error.message || 'Erro ao salvar item';
+  }
+  // 3. novos: o servidor grava e baixa o estoque (recusa se faltar)
+  const novos = ativos.filter(x => !x.id).map(i => ({ locacao_id: loc.id, ferramenta_id: i.ferramenta_id, quantidade: i.q, valor_unitario: r2(i.sub / i.q), subtotal: i.sub }));
+  if(novos.length){
+    const r = await supabaseClient.from('itens_locacao').insert(novos);
+    if(r.error) return r.error.message || 'Erro ao incluir itens';
+  }
+  return null;
 }
 function abrirEditarLocacao(locId){
   const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
   const cli = DB.clientes.find(c => c.id === loc.cliente_id);
   EDIT_ITENS = DB.itens_locacao.filter(i => i.locacao_id === loc.id).map(i => {
     const f = DB.ferramentas.find(x => x.id === i.ferramenta_id);
-    return { id: i.id, ferramenta_id: i.ferramenta_id, nome: f ? f.nome : '?', q: Number(i.quantidade || 1), sub: r2(i.subtotal), orig: r2(i.subtotal) };
+    return { id: i.id, ferramenta_id: i.ferramenta_id, nome: f ? f.nome : '?', q: Number(i.quantidade || 1), origQ: Number(i.quantidade || 1), sub: r2(i.subtotal), orig: r2(i.subtotal), removido: false };
   });
+  EDIT_ATIVA = loc.status === 'ativa';
   const fundo = abrirModal('edit-fundo', 'Editar locação', `Contrato #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
     <form id="form-editar">
       <div class="row">
@@ -2369,7 +2476,7 @@ function abrirEditarLocacao(locId){
         <button type="submit" class="btn btn-primary">Salvar e gerar novo contrato</button>
         <button type="button" class="btn btn-outline" onclick="fecharModal('edit-fundo')">Cancelar</button>
       </div>
-      <div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">Para trocar ou incluir ferramentas, faça uma nova locação (o estoque é controlado por item).</div>
+
     </form>`);
   renderItensEdicao();
   document.getElementById('ed-total').value = Number(loc.valor_total || 0).toFixed(2);
@@ -2404,16 +2511,10 @@ function abrirEditarLocacao(locId){
     };
     const r = await supabaseClient.from('locacoes').update(prepararLocacao(dados)).eq('id', loc.id);
     if(r.error){ toast(r.error.message || 'Erro ao salvar', false); btn.disabled = false; return; }
-    // grava o valor de cada item; a soma sempre bate com o total do contrato
+    // itens: inclui, retira, muda quantidade e valor; a soma sempre bate com o total do contrato
     if(EDIT_ITENS.length){
-      if(Math.abs(EDIT_ITENS.reduce((t, i) => t + i.sub, 0) - dados.valor_total) > 0.009){
-        const novos = distribuirTotal(EDIT_ITENS.map(i => i.sub), dados.valor_total, EDIT_ITENS.map(i => i.q));
-        EDIT_ITENS.forEach((i, k) => i.sub = novos[k]);
-      }
-      for(const it of EDIT_ITENS.filter(i => Math.abs(i.sub - i.orig) > 0.009)){
-        const ri = await supabaseClient.from('itens_locacao').update({ valor_unitario: r2(it.sub / it.q), subtotal: it.sub }).eq('id', it.id);
-        if(ri.error){ toast(ri.error.message || 'Erro ao salvar o valor dos itens', false); btn.disabled = false; return; }
-      }
+      const erroItens = await salvarItensEdicao(loc, dados.valor_total);
+      if(erroItens){ toast(erroItens + ' — confira os itens da locação', false); await loadAll(); btn.disabled = false; return; }
     }
     toast('Locação atualizada');
     fecharModal('edit-fundo');
@@ -2427,10 +2528,10 @@ function recalcularEdicao(locId){
   const tipo = document.getElementById('ed-tipo').value;
   if(!ret || !dev){ toast('Preencha as duas datas', false); return; }
   const dias = Math.max(1, Math.round((new Date(dev) - new Date(ret)) / 86400000));
-  EDIT_ITENS.forEach(i => { const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); i.sub = r2(r2(calcularItemValor(f, tipo, dias)) * i.q); });
+  itensAtivos().forEach(i => { const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); i.sub = r2(r2(calcularItemValor(f, tipo, dias)) * i.q); });
   renderItensEdicao();
   document.getElementById('ed-total').style.outline = '';
-  toast(`Valores da tabela: ${fmtMoney(EDIT_ITENS.reduce((t, i) => t + i.sub, 0))} (${dias} dia(s), cobrança ${tipo})`);
+  toast(`Valores da tabela: ${fmtMoney(itensAtivos().reduce((t, i) => t + i.sub, 0))} (${dias} dia(s), cobrança ${tipo})`);
 }
 
 /* ======================================================
