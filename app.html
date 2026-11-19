@@ -1404,7 +1404,7 @@ function aplicarTotalCombinado(){
 function renderNovaLocacao(el){
   carrinho = [];
   const clientesOptions = DB.clientes.map(c=>`<option value="${c.id}">${c.nome} — ${c.documento}</option>`).join('');
-  const ferramentasOptions = DB.ferramentas.filter(f=>f.quantidade_disponivel>0).map(f=>`<option value="${f.id}">${f.nome} (${f.codigo}) — disp: ${f.quantidade_disponivel}</option>`).join('');
+  const ferramentasOptions = DB.ferramentas.filter(f=>f.quantidade_disponivel>0).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR')).map(f=>`<option value="${f.id}">${f.nome} (${f.codigo}) — disp: ${f.quantidade_disponivel}</option>`).join('');
 
   el.innerHTML = `
     ${configNote()}
@@ -1433,6 +1433,11 @@ function renderNovaLocacao(el){
 
     <div class="panel">
       <h2>2. Ferramentas</h2>
+      <div class="field" style="margin-bottom:8px;">
+        <label for="busca-ferramenta">Buscar equipamento</label>
+        <input id="busca-ferramenta" type="search" autocomplete="off" placeholder="Digite nome, código ou categoria (ex.: betoneira, F012, andaime)" oninput="filtrarFerramentasLoc()" onkeydown="if(event.key==='Enter'){event.preventDefault(); adicionarItem();}">
+        <div class="sub-entrega" id="busca-ferramenta-info"></div>
+      </div>
       <div class="item-row">
         <select id="add-ferramenta">${ferramentasOptions || '<option value="">Nenhuma ferramenta disponível</option>'}</select>
         <input id="add-qtd" type="number" class="qty" value="1" min="1">
@@ -1470,6 +1475,20 @@ function renderNovaLocacao(el){
   calcularResumo();
 }
 
+// busca do equipamento na nova locação (sem acento, por nome, código ou categoria)
+const semAcentoBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function filtrarFerramentasLoc(){
+  const sel = document.getElementById('add-ferramenta'); if(!sel) return;
+  const termos = semAcentoBusca(document.getElementById('busca-ferramenta').value).split(/\s+/).filter(Boolean);
+  const lista = DB.ferramentas.filter(f => f.quantidade_disponivel > 0)
+    .filter(f => { const alvo = semAcentoBusca([f.nome, f.codigo, f.categoria].join(' ')); return termos.every(t => alvo.includes(t)); })
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  sel.innerHTML = lista.length
+    ? lista.map(f => `<option value="${f.id}">${esc(f.nome)} (${esc(f.codigo)}) — disp: ${f.quantidade_disponivel}</option>`).join('')
+    : '<option value="">Nenhum equipamento encontrado</option>';
+  const info = document.getElementById('busca-ferramenta-info');
+  if(info) info.textContent = termos.length ? `${lista.length} encontrado(s)${lista.length ? ' · Enter adiciona o primeiro' : ''}` : '';
+}
 function adicionarItem(){
   const sel = document.getElementById('add-ferramenta');
   const qtd = Number(document.getElementById('add-qtd').value);
@@ -1479,6 +1498,10 @@ function adicionarItem(){
   else { carrinho.push({ferramenta_id: sel.value, quantidade: qtd}); }
   renderCarrinho();
   calcularResumo();
+  const busca = document.getElementById('busca-ferramenta');
+  if(busca && busca.value){ busca.value = ''; filtrarFerramentasLoc(); }
+  document.getElementById('add-qtd').value = 1;
+  if(busca) busca.focus();
 }
 
 function removerItem(fid){
