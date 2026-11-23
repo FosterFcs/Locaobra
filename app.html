@@ -584,6 +584,7 @@ let PAPEL = 'admin';
 // e o local/forma da locação vão marcados nas observações (gatilhos do banco separam os campos).
 let COMPAT = false;
 let FORMAS_CFG = null; // {id, lista}
+let MULTA_CFG = null; // {id, auto: true|false} — registro oculto de configuração da multa por atraso
 
 function escurecer(hexCor, fator){
   const n = parseInt(hexCor.slice(1), 16);
@@ -672,7 +673,9 @@ async function loadAll(){
       COMPAT = !!le.error;
       const ocultos = DB.clientes.filter(c => c.tipo_pessoa === 'local_entrega');
       const cfg = DB.clientes.find(c => c.tipo_pessoa === 'config_formas');
-      DB.clientes = DB.clientes.filter(c => c.tipo_pessoa !== 'local_entrega' && c.tipo_pessoa !== 'config_formas');
+      const cfgMulta = DB.clientes.find(c => c.tipo_pessoa === 'config_multa');
+      MULTA_CFG = cfgMulta ? { id: cfgMulta.id, auto: cfgMulta.observacoes !== 'off' } : null;
+      DB.clientes = DB.clientes.filter(c => c.tipo_pessoa !== 'local_entrega' && c.tipo_pessoa !== 'config_formas' && c.tipo_pessoa !== 'config_multa');
       DB.locais_entrega = (le.data || []).concat(ocultos.map(localDeCliente));
       FORMAS_CFG = null;
       if(cfg){ try{ const l = JSON.parse(cfg.observacoes || '[]'); if(Array.isArray(l) && l.length) FORMAS_CFG = { id: cfg.id, lista: l }; }catch(e){} }
@@ -1760,25 +1763,97 @@ function calcularMulta(locacaoId, diasAtraso){
   return multaDia * diasAtraso;
 }
 
-async function marcarDevolvida(id){
-  const hoje = todayISO();
-  const loc = DB.locacoes.find(x=>x.id===id);
-  const diasAtraso = loc ? Math.max(0, Math.round((new Date(hoje) - new Date(loc.data_devolucao_prevista)) / 86400000)) : 0;
-  const multa = calcularMulta(id, diasAtraso);
-
-  if(supaOk){
-    // status, estoque e multa são atualizados juntos pelo servidor
-    const resp = await apiFetch(`/api/locacoes/${id}/devolver`, { method: 'POST', body: JSON.stringify({ data_devolucao: hoje }) });
-    if(!resp.ok){ toast(resp.data?.message || 'Erro ao registrar devolução', false); return; }
-  } else {
-    loc.status='devolvida'; loc.data_devolucao_real=hoje; loc.valor_multa=multa;
-    DB.itens_locacao.filter(i=>i.locacao_id===id).forEach(i=>{
-      const f = DB.ferramentas.find(x=>x.id===i.ferramenta_id);
-      if(f) f.quantidade_disponivel += i.quantidade;
-    });
+const multaAutomatica = () => !MULTA_CFG || MULTA_CFG.auto;
+function painelMulta(){
+  const auto = multaAutomatica();
+  return `<div class="panel" id="painel-multa">
+    <h2>Multa por atraso</h2>
+    <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Na devolução, o sistema pode sugerir a multa (diárias dos itens × dias de atraso). Você sempre pode mudar o valor ou deixar sem multa na hora de devolver, e corrigir depois no botão Editar.</div>
+    <label style="display:flex; gap:10px; align-items:center; font-weight:600; margin-bottom:8px;"><input type="radio" name="multa-auto" ${auto ? 'checked' : ''} onchange="salvarMultaCfg(true)"> Sugerir a multa calculada na devolução</label>
+    <label style="display:flex; gap:10px; align-items:center; font-weight:600;"><input type="radio" name="multa-auto" ${!auto ? 'checked' : ''} onchange="salvarMultaCfg(false)"> Não cobrar multa automática (a devolução já vem com R$ 0,00)</label>
+  </div>`;
+}
+async function salvarMultaCfg(auto){
+  const reg = { tipo_pessoa: 'config_multa', nome: 'Multa por atraso', documento: 'configuração', status: 'ativo', observacoes: auto ? 'on' : 'off' };
+  const r = MULTA_CFG ? await supabaseClient.from('clientes').update(reg).eq('id', MULTA_CFG.id) : await supabaseClient.from('clientes').insert(reg);
+  if(r.error){ toast(r.error.message || 'Erro ao salvar', false); return; }
+  MULTA_CFG = { id: r.data.id, auto };
+  toast(auto ? 'A devolução vai sugerir a multa por atraso' : 'Multa automática desligada');
+}
+// grava a multa de uma locação: valor da locação + lançamento de multa (um só, ou nenhum)
+async function ajustarMulta(locId, valor){
+  valor = r2(valor);
+  const r = await supabaseClient.from('locacoes').update({ valor_multa: valor }).eq('id', locId);
+  if(r.error) return r.error.message || 'Erro ao salvar a multa';
+  const multas = DB.pagamentos.filter(p => p.locacao_id === locId && p.tipo === 'multa');
+  for(const [k, p] of multas.entries()){
+    if(k === 0 && valor > 0){
+      if(Math.abs(Number(p.valor) - valor) > 0.009){
+        const u = await supabaseClient.from('pagamentos').update({ valor, observacoes: 'Multa por atraso (ajustada)' }).eq('id', p.id);
+        if(u.error) return u.error.message || 'Erro ao ajustar a multa';
+      }
+    } else {
+      const d = await supabaseClient.from('pagamentos').delete().eq('id', p.id);
+      if(d.error) return d.error.message || 'Erro ao excluir a multa';
+    }
   }
-  toast(multa > 0 ? `Devolução registrada com multa de ${fmtMoney(multa)} (${diasAtraso} dia(s) de atraso)` : 'Devolução registrada, estoque atualizado');
-  render('locacoes');
+  if(!multas.length && valor > 0){
+    const n = await supabaseClient.from('pagamentos').insert(prepararPagamento({ locacao_id: locId, tipo: 'multa', valor, observacoes: 'Multa por atraso' }));
+    if(n.error) return n.error.message || 'Erro ao lançar a multa';
+  }
+  return null;
+}
+function marcarDevolvida(id){
+  const loc = DB.locacoes.find(x => x.id === id); if(!loc) return;
+  const cli = DB.clientes.find(c => c.id === loc.cliente_id);
+  const fundo = abrirModal('dev-fundo', 'Registrar devolução', `Contrato #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')}`, `
+    <form id="form-dev">
+      <div class="row">
+        <div class="field"><label>Devolução prevista</label><input type="date" value="${esc(loc.data_devolucao_prevista)}" disabled></div>
+        <div class="field"><label for="dev-data">Devolvido em</label><input id="dev-data" type="date" required value="${todayISO()}"></div>
+      </div>
+      <div id="dev-info" class="sub-entrega" style="margin:-4px 0 10px; font-size:13px;"></div>
+      <div class="field"><label for="dev-multa">Multa por atraso a cobrar (R$)</label>
+        <div class="item-row"><input id="dev-multa" type="number" step="0.01" min="0" inputmode="decimal">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('dev-multa').value='0.00'">Sem multa</button></div></div>
+      <div class="actions-cell">
+        <button type="submit" class="btn btn-primary">Confirmar devolução</button>
+        <button type="button" class="btn btn-outline" onclick="fecharModal('dev-fundo')">Cancelar</button>
+      </div>
+      <div class="sub-entrega" style="margin-top:8px;">As ferramentas voltam para o estoque. A multa pode ser corrigida depois no botão Editar.</div>
+    </form>`);
+  const atualizar = () => {
+    const data = document.getElementById('dev-data').value || todayISO();
+    const dias = Math.max(0, Math.round((new Date(data) - new Date(loc.data_devolucao_prevista)) / 86400000));
+    const calc = r2(calcularMulta(id, dias));
+    document.getElementById('dev-info').textContent = dias > 0
+      ? `${dias} dia(s) de atraso · multa calculada: ${fmtMoney(calc)}${multaAutomatica() ? '' : ' (multa automática desligada em Minha empresa)'}`
+      : 'Devolução no prazo, sem atraso.';
+    document.getElementById('dev-multa').value = (multaAutomatica() ? calc : 0).toFixed(2);
+  };
+  document.getElementById('dev-data').addEventListener('change', atualizar);
+  atualizar();
+  fundo.querySelector('#form-dev').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true;
+    const data = document.getElementById('dev-data').value || todayISO();
+    const multa = Math.max(0, r2(document.getElementById('dev-multa').value));
+    if(supaOk){
+      const resp = await apiFetch(`/api/locacoes/${id}/devolver`, { method: 'POST', body: JSON.stringify({ data_devolucao: data }) });
+      if(!resp.ok){ toast(resp.data?.message || 'Erro ao registrar devolução', false); btn.disabled = false; return; }
+      await loadAll();
+      if(Math.abs(Number(resp.data?.valor_multa || 0) - multa) > 0.009){
+        const erro = await ajustarMulta(id, multa);
+        if(erro){ toast('Devolução registrada, mas a multa não foi ajustada: ' + erro + '. Corrija no botão Editar.', false); fecharModal('dev-fundo'); render('locacoes'); return; }
+      }
+    } else {
+      loc.status = 'devolvida'; loc.data_devolucao_real = data; loc.valor_multa = multa;
+      DB.itens_locacao.filter(i => i.locacao_id === id).forEach(i => { const f = DB.ferramentas.find(x => x.id === i.ferramenta_id); if(f) f.quantidade_disponivel += i.quantidade; });
+    }
+    fecharModal('dev-fundo');
+    toast(multa > 0 ? `Devolução registrada com multa de ${fmtMoney(multa)}` : 'Devolução registrada, sem multa. Estoque atualizado');
+    render('locacoes');
+  });
 }
 
 /* Cancelar: contrato feito errado ou desistência. Devolve as ferramentas ao estoque. */
@@ -1977,6 +2052,7 @@ function renderEmpresa(el){
       </div>
     </div>
     ${painelFormas()}
+    ${painelMulta()}
     ${painelPix(e)}`;
 
   document.getElementById('form-empresa').addEventListener('submit', async (ev) => {
@@ -2465,6 +2541,7 @@ function abrirEditarLocacao(locId){
         <div class="field"><label for="ed-total">Valor total (R$)</label><input id="ed-total" type="number" step="0.01" min="0" required value="${Number(loc.valor_total || 0).toFixed(2)}"></div>
         <div class="field"><label for="ed-caucao">Caução (R$)</label><input id="ed-caucao" type="number" step="0.01" min="0" value="${Number(loc.valor_caucao || 0).toFixed(2)}"></div>
       </div>
+      ${loc.status === 'devolvida' || Number(loc.valor_multa) > 0 ? `<div class="field"><label for="ed-multa">Multa por atraso (R$)</label><div class="item-row"><input id="ed-multa" type="number" step="0.01" min="0" inputmode="decimal" value="${Number(loc.valor_multa || 0).toFixed(2)}"><button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ed-multa').value='0.00'">Tirar multa</button></div></div>` : ''}
       <div class="actions-cell" style="margin:-4px 0 10px">
         <button type="button" class="btn btn-dark btn-sm" onclick="distribuirEdicao()">Dividir o total entre os itens</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="recalcularEdicao('${loc.id}')">Recalcular pela tabela e novas datas</button>
@@ -2512,6 +2589,15 @@ function abrirEditarLocacao(locId){
     };
     const r = await supabaseClient.from('locacoes').update(prepararLocacao(dados)).eq('id', loc.id);
     if(r.error){ toast(r.error.message || 'Erro ao salvar', false); btn.disabled = false; return; }
+    // multa por atraso (só quando o campo aparece)
+    const campoMulta = document.getElementById('ed-multa');
+    if(campoMulta){
+      const novaMulta = Math.max(0, r2(campoMulta.value));
+      if(Math.abs(novaMulta - Number(loc.valor_multa || 0)) > 0.009 || DB.pagamentos.filter(p => p.locacao_id === loc.id && p.tipo === 'multa').length > 1){
+        const em = await ajustarMulta(loc.id, novaMulta);
+        if(em){ toast(em, false); btn.disabled = false; return; }
+      }
+    }
     // itens: inclui, retira, muda quantidade e valor; a soma sempre bate com o total do contrato
     if(EDIT_ITENS.length){
       const erroItens = await salvarItensEdicao(loc, dados.valor_total);
