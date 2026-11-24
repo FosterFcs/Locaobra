@@ -1493,6 +1493,37 @@ function comSolicitante(obs, nome){
   if(nome === undefined) return o || null;
   return (o ? o + '\n' : '') + '[[SO:' + JSON.stringify({ s: String(nome || '').trim().slice(0, 80) }) + ']]';
 }
+/* FATURAMENTO: marca o contrato como faturado (fatura, boleto ou nota emitida) */
+function abrirFaturar(locId){
+  const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;
+  const cli = DB.clientes.find(c => c.id === loc.cliente_id);
+  const total = Number(loc.valor_total || 0) + Number(loc.valor_multa || 0);
+  const fundo = abrirModal('fat-fundo', loc.faturado_em ? 'Faturamento do contrato' : 'Faturar contrato', `Contrato #${fmtNumero(loc)} · ${esc(cli ? cli.nome : '')} · ${fmtMoney(total)}`, `
+    <form id="form-fat">
+      <div class="row">
+        <div class="field"><label for="fat-data">Data do faturamento</label><input id="fat-data" type="date" required value="${esc(loc.faturado_em || todayISO())}"></div>
+        <div class="field"><label for="fat-num">Nº da fatura / nota / boleto (opcional)</label><input id="fat-num" maxlength="40" value="${esc(loc.fatura_numero || '')}"></div>
+      </div>
+      <div class="actions-cell">
+        <button type="submit" class="btn btn-primary">${loc.faturado_em ? 'Salvar' : 'Marcar como faturado'}</button>
+        ${loc.faturado_em ? '<button type="button" class="btn btn-danger" id="fat-desfazer">Desmarcar faturamento</button>' : ''}
+        <button type="button" class="btn btn-outline" onclick="fecharModal('fat-fundo')">Fechar</button>
+      </div>
+      <div class="sub-entrega" style="margin-top:8px;">Faturado é quando a cobrança foi emitida ao cliente. O recebimento continua sendo registrado no botão Receber.</div>
+    </form>`);
+  const gravar = async (d, n) => {
+    const marca = '[[FA:' + JSON.stringify({ d, n }) + ']]';
+    const obs = String(loc.observacoes || '');
+    const r = await supabaseClient.from('locacoes').update({ observacoes: (obs ? obs + '\n' : '') + marca }).eq('id', loc.id);
+    if(r.error){ toast(r.error.message || 'Erro ao salvar o faturamento', false); return; }
+    fecharModal('fat-fundo');
+    toast(d ? `Contrato nº ${fmtNumero(loc)} faturado` : 'Faturamento desmarcado');
+    await loadAll();
+    if(document.getElementById('lista-locacoes')) filtrarLocacoes();
+  };
+  fundo.querySelector('#form-fat').addEventListener('submit', ev => { ev.preventDefault(); gravar(document.getElementById('fat-data').value || todayISO(), document.getElementById('fat-num').value.trim()); });
+  const des = fundo.querySelector('#fat-desfazer'); if(des) des.addEventListener('click', () => gravar('', ''));
+}
 function filtrarClientesLoc(){
   const sel = document.getElementById('loc-cliente'); if(!sel) return;
   const termos = semAcentoBusca(document.getElementById('busca-cliente').value).split(/\s+/).filter(Boolean);
@@ -1721,6 +1752,8 @@ function renderLocacoes(el){
             <option value="atrasada">Atrasadas</option>
             <option value="devolvida">Devolvidas</option>
             <option value="cancelada">Canceladas</option>
+            <option value="naofaturada">Não faturadas</option>
+            <option value="faturada">Faturadas</option>
             <option value="areceber">A receber (em aberto)</option>
             <option value="quitada">Quitadas</option>
           </select>
@@ -1744,12 +1777,17 @@ function filtrarLocacoes(){
     const statusMatch = !statusFiltro
       || (statusFiltro === 'areceber' ? (l.status !== 'cancelada' && saldo > 0)
       : statusFiltro === 'quitada' ? (l.status !== 'cancelada' && saldo <= 0)
+      : statusFiltro === 'naofaturada' ? (l.status !== 'cancelada' && !l.faturado_em)
+      : statusFiltro === 'faturada' ? (l.status !== 'cancelada' && !!l.faturado_em)
       : statusReal === statusFiltro);
     return nomeMatch && statusMatch;
   });
   const resumo = document.getElementById('resumo-filtro');
   if(resumo){
-    if(statusFiltro === 'areceber'){
+    if(statusFiltro === 'naofaturada' || statusFiltro === 'faturada'){
+      const total = filtrados.reduce((t, l) => t + Number(l.valor_total || 0) + Number(l.valor_multa || 0), 0);
+      resumo.innerHTML = filtrados.length ? `<b>${filtrados.length}</b> contrato(s) ${statusFiltro === 'faturada' ? 'faturado(s)' : 'sem faturar'} · total: <b${statusFiltro === 'naofaturada' ? ' style="color:var(--red)"' : ''}>${fmtMoney(total)}</b>` : '';
+    } else if(statusFiltro === 'areceber'){
       const total = filtrados.reduce((t, l) => t + saldoLocacao(l), 0);
       resumo.innerHTML = filtrados.length ? `<b>${filtrados.length}</b> contrato(s) em aberto · total a receber: <b style="color:var(--red)">${fmtMoney(total)}</b>` : '';
     } else resumo.innerHTML = '';
@@ -1771,11 +1809,12 @@ function tableLocacoesCompleta(list){
         <td>${esc(cliente?cliente.nome:'—')}${l.solicitante ? `<div class="sub-entrega">👤 ${esc(l.solicitante)}</div>` : ''}${l.endereco_entrega ? `<div class="sub-entrega">📍 ${esc(l.endereco_entrega)}</div>` : ''}</td>
         <td>${fmtDate(l.data_retirada)}</td>
         <td>${fmtDate(l.data_devolucao_prevista)}</td>
-        <td class="mono">${fmtMoney(l.valor_total)}${(()=>{ const sd = saldoLocacao(l); return sd > 0 && l.status!=='cancelada' ? `<div class="sub-entrega">a receber ${fmtMoney(sd)}</div>` : '<div class="sub-entrega" style="color:var(--green)">quitado</div>'; })()}</td>
+        <td class="mono">${fmtMoney(l.valor_total)}${l.status !== 'cancelada' ? (l.faturado_em ? `<div class="sub-entrega" style="color:var(--green)">faturado ${fmtDate(l.faturado_em)}${l.fatura_numero ? ' · nº ' + esc(l.fatura_numero) : ''}</div>` : '<div class="sub-entrega">não faturado</div>') : ''}${(()=>{ const sd = saldoLocacao(l); return sd > 0 && l.status!=='cancelada' ? `<div class="sub-entrega">a receber ${fmtMoney(sd)}</div>` : '<div class="sub-entrega" style="color:var(--green)">quitado</div>'; })()}</td>
         <td>${badge}</td>
         <td class="actions-cell">
           ${l.status!=='cancelada' ? `<button class="btn btn-primary btn-sm" onclick="abrirReceber('${l.id}')">Receber</button>` : ''}
           ${l.status!=='cancelada' ? `<button class="btn btn-outline btn-sm" onclick="abrirEditarLocacao('${l.id}')">Editar</button>` : ''}
+          ${l.status!=='cancelada' ? `<button class="btn ${l.faturado_em ? 'btn-outline' : 'btn-dark'} btn-sm" onclick="abrirFaturar('${l.id}')">${l.faturado_em ? 'Faturado ✓' : 'Faturar'}</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="gerarContratoPDF('${l.id}')">Contrato</button>
           <button class="btn btn-outline btn-sm" onclick="gerarReciboPDF('${l.id}')">Recibo</button>
           <button class="btn btn-outline btn-sm" onclick="gerarTermoPDF('${l.id}', 'retirada')">Ordem de Serviço</button>

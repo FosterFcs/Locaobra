@@ -15,3 +15,4 @@ END;
 -- lo_pag_ins: AFTER INSERT ON pagamentos, marcador [[PG:{"u":...}]] → registrado_por
 -- lo_emp_fp: não usado pelo app (formas ficam em clientes tipo_pessoa = 'config_formas')
 -- lo_sol_ins / lo_sol_upd (nov/2026): marcador [[SO:{"s":"nome"}]] nas observações → coluna solicitante (aplicados no locaobra-db)
+-- lo_fat_upd (nov/2026): marcador [[FA:{"d":data,"n":numero}]] → faturado_em / fatura_numero

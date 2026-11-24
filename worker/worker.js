@@ -10,7 +10,7 @@
 const TABELAS = {
   clientes: ['tipo_pessoa','nome','documento','telefone','email','endereco','cidade','observacoes','status'],
   ferramentas: ['codigo','nome','categoria','foto_url','valor_diaria','valor_semanal','valor_mensal','valor_reposicao','quantidade_total','quantidade_disponivel','status','observacoes'],
-  locacoes: ['cliente_id','data_retirada','data_devolucao_prevista','data_devolucao_real','tipo_cobranca','valor_total','valor_caucao','valor_multa','status','observacoes','local_entrega_id','endereco_entrega','forma_pagamento','solicitante'],
+  locacoes: ['cliente_id','data_retirada','data_devolucao_prevista','data_devolucao_real','tipo_cobranca','valor_total','valor_caucao','valor_multa','status','observacoes','local_entrega_id','endereco_entrega','forma_pagamento','solicitante','faturado_em','fatura_numero'],
   itens_locacao: ['locacao_id','ferramenta_id','quantidade','valor_unitario','subtotal'],
   pagamentos: ['locacao_id','tipo','valor','forma_pagamento','data_pagamento','observacoes'],
   // endereços de entrega / obras de cada cliente
