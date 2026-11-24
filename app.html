@@ -1721,9 +1721,12 @@ function renderLocacoes(el){
             <option value="atrasada">Atrasadas</option>
             <option value="devolvida">Devolvidas</option>
             <option value="cancelada">Canceladas</option>
+            <option value="areceber">A receber (em aberto)</option>
+            <option value="quitada">Quitadas</option>
           </select>
         </div>
       </div>
+      <div id="resumo-filtro" class="sub-entrega" style="font-size:14px; margin:-4px 0 10px;"></div>
       <div id="lista-locacoes">${DB.locacoes.length ? tableLocacoesCompleta(DB.locacoes) : `<div class="empty"><div class="display">Nenhuma locação registrada</div></div>`}</div>
     </div>
   `;
@@ -1737,9 +1740,20 @@ function filtrarLocacoes(){
     const nomeMatch = (cliente?.nome||'').toLowerCase().includes(termo) || String(l.numero||'').includes(termo);
     const atrasada = l.status==='ativa' && l.data_devolucao_prevista < todayISO();
     const statusReal = atrasada ? 'atrasada' : l.status;
-    const statusMatch = !statusFiltro || statusReal === statusFiltro;
+    const saldo = saldoLocacao(l);
+    const statusMatch = !statusFiltro
+      || (statusFiltro === 'areceber' ? (l.status !== 'cancelada' && saldo > 0)
+      : statusFiltro === 'quitada' ? (l.status !== 'cancelada' && saldo <= 0)
+      : statusReal === statusFiltro);
     return nomeMatch && statusMatch;
   });
+  const resumo = document.getElementById('resumo-filtro');
+  if(resumo){
+    if(statusFiltro === 'areceber'){
+      const total = filtrados.reduce((t, l) => t + saldoLocacao(l), 0);
+      resumo.innerHTML = filtrados.length ? `<b>${filtrados.length}</b> contrato(s) em aberto · total a receber: <b style="color:var(--red)">${fmtMoney(total)}</b>` : '';
+    } else resumo.innerHTML = '';
+  }
   document.getElementById('lista-locacoes').innerHTML = filtrados.length ? tableLocacoesCompleta(filtrados) : `<div class="empty"><div class="display">Nenhuma locação encontrada</div></div>`;
 }
 
