@@ -412,6 +412,7 @@ tr:hover td{background:#F2EFE8;}
       <button class="nav-btn" data-view="usuarios"><span class="icon">◈</span><span class="label">Usuários</span></button>
       <button class="nav-btn admin-only" data-view="empresa"><span class="icon">⚙</span><span class="label"><span class="l-longo">Minha empresa</span><span class="l-curto">Empresa</span></span></button>
       <button class="nav-btn admin-only" data-view="plano"><span class="icon">★</span><span class="label">Plano</span></button>
+      <button class="nav-btn hidden" id="nav-painel-foster" data-view="painel-foster"><span class="icon">◆</span><span class="label"><span class="l-longo">Painel Foster Tech</span><span class="l-curto">Painel</span></span></button>
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" id="backup-btn" style="margin-bottom:6px;" onclick="exportarBackup()">⬇ Backup dos dados</button>
@@ -654,7 +655,16 @@ function linkWhatsappEmpresa(){
 /* ======================================================
    CARREGAMENTO DE DADOS
    ====================================================== */
+let SUPERADMIN_VERIFICADO = false;
+async function verificarSuperadmin(){
+  if(SUPERADMIN_VERIFICADO || !supaOk) return;
+  SUPERADMIN_VERIFICADO = true;
+  const r = await apiFetch('/api/me').catch(() => null);
+  const ok = !!(r && r.ok && r.data && r.data.superadmin);
+  document.getElementById('nav-painel-foster')?.classList.toggle('hidden', !ok);
+}
 async function loadAll(){
+  verificarSuperadmin();
   if(supaOk){
     try{
       const [c,f,l,i,p] = await Promise.all([
@@ -688,7 +698,7 @@ async function loadAll(){
    NAVEGAÇÃO
    ====================================================== */
 const titles = {
-  dashboard:'Dashboard', clientes:'Clientes', locais:'Locais de entrega / obras', ferramentas:'Ferramentas',
+  dashboard:'Dashboard', 'painel-foster':'Painel Foster Tech', clientes:'Clientes', locais:'Locais de entrega / obras', ferramentas:'Ferramentas',
   'nova-locacao':'Nova Locação', locacoes:'Locações', relatorio:'Relatório do dia', usuarios:'Usuários', empresa:'Minha empresa', plano:'Plano e pagamento'
 };
 document.querySelectorAll('.nav-btn').forEach(btn=>{
@@ -728,6 +738,7 @@ async function render(view){
   else if(view === 'nova-locacao') renderNovaLocacao(el);
   else if(view === 'locacoes') renderLocacoes(el);
   else if(view === 'relatorio') renderRelatorio(el);
+  else if(view === 'painel-foster') renderPainelFoster(el);
   else if(view === 'usuarios') await renderUsuarios(el);
   else if(view === 'empresa') renderEmpresa(el);
   else if(view === 'plano') await renderPlano(el);
@@ -1500,6 +1511,60 @@ function comSolicitante(obs, nome){
   if(nome === undefined) return o || null;
   return (o ? o + '\n' : '') + '[[SO:' + JSON.stringify({ s: String(nome || '').trim().slice(0, 80) }) + ']]';
 }
+/* PAINEL FOSTER TECH: todas as locadoras (só para os donos do sistema) */
+let PAINEL_LOCADORAS = [];
+async function renderPainelFoster(el){
+  el.innerHTML = '<div class="empty">Carregando locadoras…</div>';
+  const r = await apiFetch('/api/admin/locadoras');
+  if(!r.ok){ el.innerHTML = `<div class="empty">${esc(r.data?.message || 'Não foi possível carregar o painel')}</div>`; return; }
+  PAINEL_LOCADORAS = r.data;
+  const L = PAINEL_LOCADORAS;
+  const diaBR = d => d ? fmtDate(dataBR(d)) : '—';
+  const situ = e => e.plano === 'ativo' ? ['Liberada', 'badge-ok'] : e.plano === 'suspenso' ? ['Suspensa', 'badge-bad'] :
+    e.plano === 'assinante' ? (e.acesso_liberado ? ['Assinante', 'badge-ok'] : ['Assinatura vencida', 'badge-bad']) :
+    (e.acesso_liberado ? [`Teste · ${e.dias_teste} dia(s)`, 'badge-warn'] : ['Teste encerrado', 'badge-bad']);
+  const ativos7 = L.filter(e => e.locacoes_7d > 0).length;
+  const hoje = todayISO();
+  const novos = L.filter(e => dataBR(e.criado_em) >= hoje).length;
+  const tel = t => String(t || '').replace(/\D/g, '');
+  el.innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:16px;">
+      <div class="panel"><div class="sub-entrega">Locadoras</div><div class="mono" style="font-size:22px;"><b>${L.length}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Em teste</div><div class="mono" style="font-size:22px;"><b>${L.filter(e => e.plano === 'teste' && e.acesso_liberado).length}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Assinantes</div><div class="mono" style="font-size:22px;"><b>${L.filter(e => e.plano === 'assinante' && e.acesso_liberado).length}</b></div></div>
+      <div class="panel"><div class="sub-entrega">Usando (7 dias) · novas hoje</div><div class="mono" style="font-size:22px;"><b>${ativos7}</b> · <b>${novos}</b></div></div>
+    </div>
+    <div class="panel">
+      <h2>Locadoras <span class="tag">${L.length}</span></h2>
+      <div class="sub-entrega" style="margin:-6px 0 12px;">Só números de uso: os clientes e contratos de cada locadora continuam privados.</div>
+      <div style="overflow-x:auto;"><table><thead><tr><th>Locadora</th><th>Situação</th><th>Uso</th><th>Datas</th><th>Ações</th></tr></thead><tbody>
+      ${L.map(e => { const [st, cls] = situ(e); return `<tr>
+        <td><b>${esc(e.nome)}</b><div class="sub-entrega">${esc(e.cidade || '')}${e.admin_email ? ' · ' + esc(e.admin_email) : ''}</div>
+          ${tel(e.telefone) ? `<a class="sub-entrega" href="https://wa.me/55${tel(e.telefone).replace(/^55/, '')}" target="_blank" rel="noopener">WhatsApp ${esc(e.telefone)}</a>` : ''}</td>
+        <td><span class="badge ${cls}">${st}</span>${e.assinatura_plano ? `<div class="sub-entrega">${esc(e.assinatura_plano)} · ${esc(e.assinatura_ciclo || '')} · ${esc(e.assinatura_status || '')}</div>` : ''}${e.fundador ? '<div class="sub-entrega">fundador</div>' : ''}</td>
+        <td class="mono" style="font-size:12.5px;">${e.locacoes} locações (${e.locacoes_7d} em 7d)<br>${e.clientes} clientes · ${e.ferramentas} ferram.<br>${e.usuarios} usuário(s)</td>
+        <td style="font-size:12.5px;">Criada ${diaBR(e.criado_em)}<br>Último login ${diaBR(e.ultimo_login)}<br>Última locação ${diaBR(e.ultima_locacao)}<br>${e.plano === 'teste' ? 'Teste até <b>' + fmtDate(e.teste_ate) + '</b>' : e.pago_ate ? 'Pago até ' + fmtDate(e.pago_ate) : ''}</td>
+        <td class="actions-cell">
+          <div class="item-row" style="margin-bottom:6px;"><input type="date" id="pt-${e.id}" value="${esc(e.teste_ate || '')}" style="max-width:150px;"><button class="btn btn-outline btn-sm" onclick="acaoPainel('${e.id}','teste')">Mudar teste</button></div>
+          ${e.plano !== 'ativo' ? `<button class="btn btn-primary btn-sm" onclick="acaoPainel('${e.id}','liberar')">Liberar grátis</button>` : ''}
+          ${e.plano === 'ativo' || e.plano === 'suspenso' ? `<button class="btn btn-outline btn-sm" onclick="acaoPainel('${e.id}','normal')">Voltar ao normal</button>` : ''}
+          ${e.plano !== 'suspenso' ? `<button class="btn btn-danger btn-sm" onclick="acaoPainel('${e.id}','suspender')">Suspender</button>` : ''}
+        </td></tr>`; }).join('')}
+      </tbody></table></div>
+    </div>`;
+}
+async function acaoPainel(id, acao){
+  const e = PAINEL_LOCADORAS.find(x => x.id === id); if(!e) return;
+  const body = { acao };
+  if(acao === 'teste'){ body.teste_ate = document.getElementById('pt-' + id).value; if(!body.teste_ate){ toast('Escolha a data', false); return; } }
+  const textos = { teste: `Mudar o teste de "${e.nome}" para ${fmtDate(body.teste_ate)}?`, liberar: `Liberar "${e.nome}" sem cobrança?`, suspender: `Suspender "${e.nome}"? A locadora fica sem poder registrar (os dados continuam guardados).`, normal: `Voltar "${e.nome}" ao normal (teste ou assinatura)?` };
+  if(!confirm(textos[acao])) return;
+  const r = await apiFetch(`/api/admin/locadoras/${id}`, { method: 'POST', body: JSON.stringify(body) });
+  if(!r.ok){ toast(r.data?.message || 'Erro', false); return; }
+  toast('Feito');
+  renderPainelFoster(document.getElementById('content'));
+}
+
 /* FATURAMENTO: marca o contrato como faturado (fatura, boleto ou nota emitida) */
 function abrirFaturar(locId){
   const loc = DB.locacoes.find(l => l.id === locId); if(!loc) return;

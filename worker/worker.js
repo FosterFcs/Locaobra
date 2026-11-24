@@ -43,6 +43,9 @@ const ASAAS_URL = { sandbox: 'https://api-sandbox.asaas.com/v3', production: 'ht
 const PAGO = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
 const ESTORNADO = ['REFUNDED', 'REFUND_REQUESTED', 'REFUND_IN_PROGRESS', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'AWAITING_CHARGEBACK_REVERSAL'];
 const SESSAO_DIAS = 30;
+// Donos do LocaObra (Foster Tech): enxergam o painel com todas as locadoras
+const SUPERADMINS = ['fosterconstrutora@gmail.com'];
+const ehSuperadmin = (s, env) => SUPERADMINS.concat(String(env.SUPERADMIN_EMAILS || '').split(',')).map(normEmail).filter(Boolean).includes(normEmail(s.email));
 const PBKDF2_ITERACOES = 100000; // máximo aceito pelo Workers
 
 /* ---------------- utilidades ---------------- */
@@ -461,7 +464,46 @@ async function rotear(request, env, url){
 
   if(path === '/api/me' && method === 'GET'){
     if(!situacaoAcesso(s).liberado) await sincronizarAssinatura(env, s.empresa_id);
-    return [200, { email: s.email, nome: s.nome, papel: s.papel, empresa: await empresaPublica(env, s.empresa_id) }];
+    return [200, { email: s.email, nome: s.nome, papel: s.papel, superadmin: ehSuperadmin(s, env), empresa: await empresaPublica(env, s.empresa_id) }];
+  }
+
+  // ----- PAINEL FOSTER TECH (só os donos do sistema) -----
+  // Mostra números de uso de cada locadora; não abre clientes nem contratos delas.
+  if(path === '/api/admin/locadoras' && method === 'GET'){
+    if(!ehSuperadmin(s, env)) throw new Erro(403, 'Acesso restrito');
+    const { results } = await env.DB.prepare(`
+      SELECT e.id, e.nome, e.cidade, e.telefone, e.email, e.plano, e.teste_ate, e.pago_ate, e.assinatura_plano, e.assinatura_ciclo,
+             e.assinatura_status, e.fundador, e.criado_em,
+             (SELECT u.email FROM usuarios u WHERE u.empresa_id = e.id AND u.papel = 'admin' ORDER BY u.criado_em LIMIT 1) AS admin_email,
+             (SELECT u.nome FROM usuarios u WHERE u.empresa_id = e.id AND u.papel = 'admin' ORDER BY u.criado_em LIMIT 1) AS admin_nome,
+             (SELECT COUNT(*) FROM usuarios u WHERE u.empresa_id = e.id) AS usuarios,
+             (SELECT COUNT(*) FROM clientes c WHERE c.empresa_id = e.id AND COALESCE(c.tipo_pessoa,'') NOT IN ('local_entrega','config_formas','config_multa')) AS clientes,
+             (SELECT COUNT(*) FROM ferramentas f WHERE f.empresa_id = e.id) AS ferramentas,
+             (SELECT COUNT(*) FROM locacoes l WHERE l.empresa_id = e.id) AS locacoes,
+             (SELECT COUNT(*) FROM locacoes l WHERE l.empresa_id = e.id AND l.criado_em >= datetime('now','-7 days')) AS locacoes_7d,
+             (SELECT MAX(l.criado_em) FROM locacoes l WHERE l.empresa_id = e.id) AS ultima_locacao,
+             (SELECT MAX(x.criado_em) FROM sessions x WHERE x.empresa_id = e.id) AS ultimo_login
+        FROM empresas e ORDER BY e.criado_em DESC`).all();
+    return [200, results.map(e => { const a = situacaoAcesso(e); return { ...e, acesso_liberado: a.liberado, dias_teste: a.dias_teste ?? null }; })];
+  }
+  const mAdm = path.match(/^\/api\/admin\/locadoras\/([a-zA-Z0-9-]+)$/);
+  if(mAdm && method === 'POST'){
+    if(!ehSuperadmin(s, env)) throw new Erro(403, 'Acesso restrito');
+    const b = await corpo();
+    const e = await env.DB.prepare('SELECT id, plano FROM empresas WHERE id = ?1').bind(mAdm[1]).first();
+    if(!e) throw new Erro(404, 'Locadora não encontrada');
+    if(b.acao === 'teste'){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(b.teste_ate || '')) throw new Erro(400, 'Data inválida');
+      await env.DB.prepare(`UPDATE empresas SET teste_ate = ?1, plano = CASE WHEN plano IN ('suspenso','teste') THEN 'teste' ELSE plano END WHERE id = ?2`).bind(b.teste_ate, e.id).run();
+    } else if(b.acao === 'liberar'){
+      await env.DB.prepare(`UPDATE empresas SET plano = 'ativo' WHERE id = ?1`).bind(e.id).run();
+    } else if(b.acao === 'suspender'){
+      await env.DB.prepare(`UPDATE empresas SET plano = 'suspenso' WHERE id = ?1`).bind(e.id).run();
+    } else if(b.acao === 'normal'){
+      // volta a valer o teste ou a assinatura
+      await env.DB.prepare(`UPDATE empresas SET plano = CASE WHEN pago_ate IS NOT NULL THEN 'assinante' ELSE 'teste' END WHERE id = ?1`).bind(e.id).run();
+    } else throw new Erro(400, 'Ação inválida');
+    return [200, { ok: true }];
   }
 
   if(path === '/api/senha' && method === 'POST'){
