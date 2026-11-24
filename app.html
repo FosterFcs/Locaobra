@@ -1409,7 +1409,7 @@ function aplicarTotalCombinado(){
 
 function renderNovaLocacao(el){
   carrinho = [];
-  const clientesOptions = DB.clientes.map(c=>`<option value="${c.id}">${c.nome} — ${c.documento}</option>`).join('');
+  const clientesOptions = DB.clientes.slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR')).map(c=>`<option value="${c.id}">${esc(c.nome)} — ${esc(c.documento)}</option>`).join('');
   const ferramentasOptions = DB.ferramentas.filter(f=>f.quantidade_disponivel>0).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR')).map(f=>`<option value="${f.id}">${f.nome} (${f.codigo}) — disp: ${f.quantidade_disponivel}</option>`).join('');
 
   el.innerHTML = `
@@ -1417,7 +1417,10 @@ function renderNovaLocacao(el){
     <div class="panel">
       <h2>1. Cliente e período</h2>
       <div class="row">
-        <div class="field"><label>Cliente</label><select id="loc-cliente">${clientesOptions || '<option value="">Cadastre um cliente primeiro</option>'}</select></div>
+        <div class="field"><label for="busca-cliente">Cliente</label>
+          <input id="busca-cliente" type="search" autocomplete="off" placeholder="Buscar por nome, CPF/CNPJ ou telefone" oninput="filtrarClientesLoc()" style="margin-bottom:6px;">
+          <select id="loc-cliente">${clientesOptions || '<option value="">Cadastre um cliente primeiro</option>'}</select>
+          <div class="sub-entrega" id="busca-cliente-info"></div></div>
         <div class="field"><label>Tipo de cobrança</label>
           <select id="loc-tipo">
             <option value="diaria">Diária</option>
@@ -1430,6 +1433,7 @@ function renderNovaLocacao(el){
         <div class="field"><label>Data de retirada</label><input id="loc-retirada" type="date" value="${todayISO()}"></div>
         <div class="field"><label>Data de devolução prevista</label><input id="loc-devolucao" type="date"></div>
       </div>
+      <div class="field"><label for="loc-solicitante">Solicitante (quem pediu o equipamento)</label><input id="loc-solicitante" maxlength="80" placeholder="Ex.: João, encarregado da obra"></div>
       <div class="field"><label for="loc-local">Local de entrega / obra</label><select id="loc-local"></select></div>
       <div id="loc-novo-local" class="hidden" style="border:1.5px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:12px;">
         <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Novo local de entrega (fica salvo no cadastro do cliente)</div>
@@ -1483,6 +1487,26 @@ function renderNovaLocacao(el){
 
 // busca do equipamento na nova locação (sem acento, por nome, código ou categoria)
 const semAcentoBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+// solicitante vai marcado nas observações; o banco separa no campo próprio
+function comSolicitante(obs, nome){
+  const o = String(obs || '').trim();
+  if(nome === undefined) return o || null;
+  return (o ? o + '\n' : '') + '[[SO:' + JSON.stringify({ s: String(nome || '').trim().slice(0, 80) }) + ']]';
+}
+function filtrarClientesLoc(){
+  const sel = document.getElementById('loc-cliente'); if(!sel) return;
+  const termos = semAcentoBusca(document.getElementById('busca-cliente').value).split(/\s+/).filter(Boolean);
+  const dig = t => t.replace(/\D/g, '');
+  const lista = DB.clientes.filter(c => {
+    const alvo = semAcentoBusca([c.nome, c.documento, c.telefone, c.email, c.cidade].join(' '));
+    const alvoDig = dig([c.documento, c.telefone].join(' '));
+    return termos.every(t => alvo.includes(t) || (dig(t).length >= 3 && alvoDig.includes(dig(t))));
+  }).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  sel.innerHTML = lista.length ? lista.map(c => `<option value="${c.id}">${esc(c.nome)} — ${esc(c.documento)}</option>`).join('') : '<option value="">Nenhum cliente encontrado</option>';
+  const info = document.getElementById('busca-cliente-info');
+  if(info) info.textContent = termos.length ? `${lista.length} cliente(s) encontrado(s)` : '';
+  sel.dispatchEvent(new Event('change'));
+}
 function filtrarFerramentasLoc(){
   const sel = document.getElementById('add-ferramenta'); if(!sel) return;
   const termos = semAcentoBusca(document.getElementById('busca-ferramenta').value).split(/\s+/).filter(Boolean);
@@ -1613,6 +1637,7 @@ async function salvarLocacao(){
   const {dias} = calcularPeriodo();
   const forma = document.getElementById('loc-forma').value;
   const obs = document.getElementById('loc-obs').value.trim();
+  const solicitante = (document.getElementById('loc-solicitante')?.value || '').trim();
 
   // local de entrega
   let localSel = document.getElementById('loc-local').value;
@@ -1638,7 +1663,7 @@ async function salvarLocacao(){
     local_entrega_id: entrega.local_entrega_id,
     endereco_entrega: entrega.endereco_entrega,
     forma_pagamento: forma || null,
-    observacoes: obs || null
+    observacoes: comSolicitante(obs, solicitante)
   };
 
   let locacaoId, numero;
@@ -1729,7 +1754,7 @@ function tableLocacoesCompleta(list){
         '<span class="badge badge-ok">Ativa</span>';
       return `<tr>
         <td class="mono">#${fmtNumero(l)}</td>
-        <td>${esc(cliente?cliente.nome:'—')}${l.endereco_entrega ? `<div class="sub-entrega">📍 ${esc(l.endereco_entrega)}</div>` : ''}</td>
+        <td>${esc(cliente?cliente.nome:'—')}${l.solicitante ? `<div class="sub-entrega">👤 ${esc(l.solicitante)}</div>` : ''}${l.endereco_entrega ? `<div class="sub-entrega">📍 ${esc(l.endereco_entrega)}</div>` : ''}</td>
         <td>${fmtDate(l.data_retirada)}</td>
         <td>${fmtDate(l.data_devolucao_prevista)}</td>
         <td class="mono">${fmtMoney(l.valor_total)}${(()=>{ const sd = saldoLocacao(l); return sd > 0 && l.status!=='cancelada' ? `<div class="sub-entrega">a receber ${fmtMoney(sd)}</div>` : '<div class="sub-entrega" style="color:var(--green)">quitado</div>'; })()}</td>
@@ -2168,7 +2193,11 @@ function prepararLocacao(obj, nova){
   const m = { l: o.local_entrega_id ?? null, e: o.endereco_entrega ?? null, f: o.forma_pagamento ?? null };
   if(nova) m.u = usuarioNome || usuarioLogado || null;
   delete o.local_entrega_id; delete o.endereco_entrega; delete o.forma_pagamento;
-  o.observacoes = (o.observacoes ? o.observacoes + '\n' : '') + '[[LO:' + JSON.stringify(m) + ']]';
+  // um marcador só: o solicitante entra junto
+  let obs = String(o.observacoes || '');
+  const iSo = obs.indexOf('[[SO:');
+  if(iSo >= 0){ try{ m.s = JSON.parse(obs.slice(iSo + 5, -2)).s || ''; }catch(e){} obs = obs.slice(0, iSo).replace(/\s+$/, ''); }
+  o.observacoes = (obs ? obs + '\n' : '') + '[[LO:' + JSON.stringify(m) + ']]';
   return o;
 }
 // quem registrou o pagamento (no servidor novo é o próprio servidor que grava)
@@ -2547,6 +2576,7 @@ function abrirEditarLocacao(locId){
         <button type="button" class="btn btn-outline btn-sm" onclick="recalcularEdicao('${loc.id}')">Recalcular pela tabela e novas datas</button>
       </div>
       <div id="ed-itens" style="margin-bottom:12px; overflow-x:auto;"></div>
+      <div class="field"><label for="ed-solicitante">Solicitante (quem pediu o equipamento)</label><input id="ed-solicitante" maxlength="80" value="${esc(loc.solicitante || '')}"></div>
       <div class="field"><label for="ed-local">Local de entrega / obra</label><select id="ed-local"></select></div>
       <div id="ed-novo-local" class="hidden" style="border:1.5px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:12px;">${camposLocalHTML('el')}</div>
       <div class="field"><label for="ed-obs">Observações do contrato</label><textarea id="ed-obs" rows="2">${esc(loc.observacoes || '')}</textarea></div>
@@ -2584,7 +2614,7 @@ function abrirEditarLocacao(locId){
       valor_total: Math.round(Number(document.getElementById('ed-total').value || 0) * 100) / 100,
       valor_caucao: Math.round(Number(document.getElementById('ed-caucao').value || 0) * 100) / 100,
       forma_pagamento: document.getElementById('ed-forma').value || null,
-      observacoes: document.getElementById('ed-obs').value.trim() || null,
+      observacoes: comSolicitante(document.getElementById('ed-obs').value, document.getElementById('ed-solicitante').value),
       local_entrega_id: entrega.local_entrega_id, endereco_entrega: entrega.endereco_entrega
     };
     const r = await supabaseClient.from('locacoes').update(prepararLocacao(dados)).eq('id', loc.id);
@@ -3096,6 +3126,7 @@ async function gerarContratoPDF(loc){
   doc.text(`Documento: ${cliente.documento || '-'}`, 15, y); y+=5;
   doc.text(`Telefone: ${cliente.telefone || '-'}`, 15, y); y+=5;
   doc.text(`Endereço: ${cliente.endereco || '-'}`, 15, y); y+=5;
+  if(loc.solicitante){ doc.text(`Solicitante: ${loc.solicitante}`, 15, y); y+=5; }
   const entregaC = doc.splitTextToSize(`Local de entrega / obra: ${textoEntrega(loc, cliente)}`, 180);
   doc.text(entregaC, 15, y); y+= entregaC.length*5 + 5;
 
@@ -3288,6 +3319,7 @@ async function gerarTermoPDF(loc, tipo){
   doc.setFont('helvetica','bold'); doc.text('LOCATÁRIO', 15, y); y+=5.5;
   doc.setFont('helvetica','normal');
   doc.text(`${cliente.nome || '-'}  |  Doc: ${cliente.documento || '-'}  |  Tel: ${cliente.telefone || '-'}`, 15, y); y+=6;
+  if(loc.solicitante){ doc.text(`Solicitante: ${loc.solicitante}`, 15, y); y+=5; }
   const entregaT = doc.splitTextToSize(`Local de entrega / obra: ${textoEntrega(loc, cliente)}`, 180);
   doc.text(entregaT, 15, y); y+= entregaT.length*5 + 5;
 
