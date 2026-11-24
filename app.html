@@ -385,6 +385,7 @@ tr:hover td{background:#F2EFE8;}
       <div class="field"><label for="cad-cidade">Cidade</label><input id="cad-cidade"></div>
       <div class="field"><label for="cad-email">E-mail de acesso</label><input id="cad-email" type="email" required autocomplete="username"></div>
       <div class="field"><label for="cad-senha">Senha</label><input id="cad-senha" type="password" required minlength="8" autocomplete="new-password" placeholder="mínimo 8 caracteres"></div>
+      <label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; margin:4px 0 12px; text-transform:none; letter-spacing:0; font-weight:500;"><input type="checkbox" id="cad-termos" required style="width:auto; margin-top:3px;"> <span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a> do LocaObra</span></label>
       <button type="submit" class="btn btn-primary">Criar conta e começar o teste grátis</button>
       <div class="login-error" id="cad-error"></div>
       <span class="login-switch">Já tem conta? <a id="ir-login">Entrar</a></span>
@@ -768,11 +769,13 @@ let CICLO_ESCOLHIDO = 'anual', PLANO_ESCOLHIDO = 'essencial';
 async function renderPlano(el){
   if(!supaOk){ el.innerHTML = `${configNote()}<div class="empty">Indisponível no modo demonstração.</div>`; return; }
   el.innerHTML = '<div class="empty">Carregando planos…</div>';
-  const [rp] = await Promise.all([fetch(`${API_BASE_URL}/api/planos`).then(r => r.json()).catch(() => null), atualizarPlano()]);
+  const [rp, ru] = await Promise.all([fetch(`${API_BASE_URL}/api/planos`).then(r => r.json()).catch(() => null), apiFetch('/api/usuarios').catch(() => null), atualizarPlano()]);
+  const qtdUsuarios = ru && ru.ok && Array.isArray(ru.data) ? ru.data.length : 0;
   const e = EMPRESA;
   if(!rp || !rp.planos){ el.innerHTML = '<div class="empty">Não foi possível carregar os planos. Tente de novo.</div>'; return; }
   const P = Object.fromEntries(rp.planos.map(p => [p.id, p]));
   if(e.assinatura_plano) PLANO_ESCOLHIDO = e.assinatura_plano;
+  else if(qtdUsuarios > (P.essencial?.usuarios ?? 2) && PLANO_ESCOLHIDO === 'essencial') PLANO_ESCOLHIDO = 'profissional';
   if(e.assinatura_ciclo) CICLO_ESCOLHIDO = e.assinatura_ciclo;
   const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -810,6 +813,7 @@ async function renderPlano(el){
       <h3>${p.nome}</h3>
       <div class="preco">${brl(mensalEq)}<small>/mês</small></div>
       <div style="font-size:12.5px; color:var(--ink-soft);">${CICLO_ESCOLHIDO === 'anual' ? `${brl(p.anual)} cobrados uma vez por ano` : 'cobrado todo mês'}</div>
+      ${qtdUsuarios > p.usuarios ? `<div class="sub-entrega" style="color:var(--red); font-weight:600; margin:4px 0;">Vocês têm ${qtdUsuarios} usuários: este plano permite ${p.usuarios}</div>` : ''}
       <ul>
         <li>Até ${p.usuarios} usuários</li>
         <li>Locações e ferramentas ilimitadas</li>
@@ -822,6 +826,7 @@ async function renderPlano(el){
   el.innerHTML = status + `
     <div class="panel">
       <h2>Escolha seu plano</h2>
+      ${rp.ambiente === 'teste' ? `<div class="teste-aviso" style="border-color:var(--red);">Pagamentos em <b>ambiente de testes</b>: nenhuma cobrança real será feita.</div>` : ''}
       ${rp.vagas_fundador > 0 && !e.fundador ? `<div class="teste-aviso">Lançamento: restam <b>${rp.vagas_fundador}</b> vagas de <b>preço de fundador</b> (valor travado por 12 meses).</div>` : ''}
       <div class="ciclo-toggle" role="group" aria-label="Forma de cobrança">
         <button type="button" data-ciclo="mensal" class="${CICLO_ESCOLHIDO === 'mensal' ? 'on' : ''}">Mensal</button>
@@ -833,6 +838,7 @@ async function renderPlano(el){
           <div class="field"><label for="ass-doc">CNPJ da locadora (ou CPF)</label><input id="ass-doc" inputmode="numeric" required value="${esc(e.cnpj || '')}" placeholder="00.000.000/0000-00"></div>
           <div class="field"><label for="ass-nome">Nome do responsável</label><input id="ass-nome" value="${esc(e.nome || '')}"></div>
         </div>
+        <label style="display:flex; gap:8px; align-items:flex-start; font-size:13.5px; margin:0 0 12px; text-transform:none; letter-spacing:0; font-weight:500; color:var(--ink);"><input type="checkbox" id="ass-termos" required style="width:auto; margin-top:3px;"> <span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos de Uso e Contrato de Licença</a> do LocaObra</span></label>
         <button type="submit" class="btn btn-primary">${e.plano === 'teste' && e.acesso_liberado ? 'Assinar (1ª cobrança só no fim do teste)' : 'Assinar e gerar fatura'}</button>
         <div style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;">Pagamento pelo Asaas: Pix, boleto ou cartão. Sem fidelidade, cancele quando quiser.</div>
       </form>
@@ -855,6 +861,7 @@ async function renderPlano(el){
   });
   document.getElementById('form-assinar').addEventListener('submit', async ev => {
     ev.preventDefault();
+    if(qtdUsuarios > P[PLANO_ESCOLHIDO].usuarios){ toast(`O plano ${P[PLANO_ESCOLHIDO].nome} permite ${P[PLANO_ESCOLHIDO].usuarios} usuários e vocês têm ${qtdUsuarios}. Escolha o Profissional ou exclua usuários em Usuários.`, false); return; }
     const btn = ev.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Gerando fatura…';
     const r = await apiFetch('/api/assinatura', { method: 'POST', body: JSON.stringify({
       plano: PLANO_ESCOLHIDO, ciclo: CICLO_ESCOLHIDO, cpf_cnpj: document.getElementById('ass-doc').value, nome: document.getElementById('ass-nome').value }) });
