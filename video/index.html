@@ -34,6 +34,7 @@ video{width:100%;max-height:72vh;aspect-ratio:9/16;background:#F7F5F0;border-rad
 .red{background:#E00000;color:#fff}
 .ghost{border:2px solid rgba(255,255,255,.35);color:#fff}
 small{color:#9CA0A8;font-size:13px;text-align:center}
+body.wide .wrap{max-width:1000px} body.wide video{aspect-ratio:16/9;max-height:none} body.wide .btn{max-width:520px}
 footer{color:#9CA0A8;font-size:12px;display:flex;align-items:center;gap:6px;margin-top:4px}
 </style>
 </head>
@@ -41,9 +42,8 @@ footer{color:#9CA0A8;font-size:12px;display:flex;align-items:center;gap:6px;marg
 <div class="hz"></div>
 <div class="wrap">
   <div class="logo">LOCA<b>OBRA</b></div>
-  <video controls playsinline preload="metadata" poster="capa.jpg">
-    <source src="locaobra.mp4" type="video/mp4">
-  </video>
+  <video id="vid" controls playsinline preload="metadata"></video>
+  <script>(function(){var v=document.getElementById("vid"),w=window.matchMedia("(min-width: 900px)").matches;if(w)document.body.classList.add("wide");v.poster=w?"capa-horizontal.jpg":"capa.jpg";v.src=w?"locaobra-horizontal.mp4":"locaobra.mp4";})();</script>
   <a class="btn red" href="../app.html#cadastro">Testar grátis por 14 dias</a>
   <a class="btn ghost" href="../">Conhecer o LocaObra</a>
   <small>Sem cartão de crédito. Dúvidas? <a href="https://wa.me/5524992096103?text=Ol%C3%A1!%20Vi%20o%20v%C3%ADdeo%20do%20LocaObra%20e%20quero%20saber%20mais." style="color:#fff">Fale no WhatsApp</a></small>
