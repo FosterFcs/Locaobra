@@ -416,6 +416,7 @@ tr:hover td{background:#F2EFE8;}
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" id="backup-btn" style="margin-bottom:6px;" onclick="exportarBackup()">⬇ Backup dos dados</button>
+      <button class="logout-btn" id="senha-btn" style="margin-bottom:6px;" onclick="abrirAlterarSenha()">🔑 Alterar senha</button>
       <button class="logout-btn" id="logout-btn">↩ Sair</button>
       <div class="dev-signature dev-signature-sidebar" style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg class="bandeira" viewBox="0 0 28 20" width="16" height="11" role="img" aria-label="Bandeira do Brasil"><rect width="28" height="20" rx="2" fill="#009C3B"/><path d="M14 2.5 25.5 10 14 17.5 2.5 10z" fill="#FFDF00"/><circle cx="14" cy="10" r="4.6" fill="#002776"/><path d="M9.6 9.2c3-.9 6.1-.5 8.8 1" stroke="#fff" stroke-width=".9" fill="none"/></svg><span>© <span class="ano-atual">2026</span> Foster Tech Soluções</span></div>
     </div>
@@ -428,6 +429,7 @@ tr:hover td{background:#F2EFE8;}
       <div class="topbar-actions">
         <button type="button" class="topbar-logout" onclick="FosterQR.abrir()" title="Mostrar QR Code do LocaObra" aria-label="Mostrar QR Code do LocaObra"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-3px"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M17 20h4v-3"/></svg></button>
         <button type="button" class="topbar-logout" onclick="exportarBackup()">⬇ Backup</button>
+        <button type="button" class="topbar-logout" onclick="abrirAlterarSenha()" title="Alterar senha" aria-label="Alterar senha">🔑</button>
         <button type="button" class="topbar-logout" onclick="document.getElementById('logout-btn').click()">↩ Sair</button>
       </div>
     </div>
@@ -2064,6 +2066,19 @@ function lembreteWhatsapp(id){
   window.open(`https://wa.me/${numeroCompleto}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// Atalho do menu: abre Usuários e leva direto ao formulário de troca de senha
+function abrirAlterarSenha(){
+  document.querySelector('[data-view="usuarios"]').click();
+  let tentativas = 0;
+  const t = setInterval(() => {
+    const painel = document.getElementById('painel-senha');
+    if(painel || ++tentativas > 40){
+      clearInterval(t);
+      if(painel){ painel.scrollIntoView({ behavior: 'smooth', block: 'center' }); document.getElementById('senha-atual')?.focus(); }
+    }
+  }, 100);
+}
+
 function verLocacao(id){
   document.querySelector('[data-view="locacoes"]').click();
 }
@@ -2103,8 +2118,8 @@ async function renderUsuarios(el){
         <div id="lista-usuarios">${listaUsuariosHTML(usuarios)}</div>
       </div>
     </div>
-    <div class="panel" style="max-width:520px;">
-      <h2>Trocar minha senha</h2>
+    <div class="panel" id="painel-senha" style="max-width:520px;">
+      <h2>Alterar minha senha</h2>
       <div style="font-size:13px; color:var(--ink-soft); margin-bottom:12px;">Você está logado como <b>${esc(usuarioLogado)}</b>. Os outros aparelhos onde você está logado serão desconectados.</div>
       <form id="form-senha">
         <div class="field"><label for="senha-atual">Senha atual</label><input id="senha-atual" type="password" required autocomplete="current-password"></div>
